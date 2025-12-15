@@ -33,4 +33,7 @@ public class RoleEntity
 
     // Navegación many-to-many con Permissions
     public ICollection<RolePermissionEntity> RolePermissions { get; set; } = new List<RolePermissionEntity>();
+
+    // Navegación many-to-many con Users
+    public ICollection<UserRoleEntity> UserRoles { get; set; } = new List<UserRoleEntity>();
 }

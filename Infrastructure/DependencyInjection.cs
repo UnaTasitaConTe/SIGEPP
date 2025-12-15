@@ -1,6 +1,9 @@
+using Application.Security;
 using Domain.Security.Repositories;
+using Domain.Users;
 using Infrastructure.Persistence;
 using Infrastructure.Persistence.Repositories;
+using Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -28,6 +31,9 @@ public static class DependencyInjection
 
         // Registrar Repositories
         services.AddRepositories();
+
+        // Registrar servicios de seguridad
+        services.AddSecurity(configuration);
 
         return services;
     }
@@ -83,8 +89,44 @@ public static class DependencyInjection
     /// </summary>
     private static IServiceCollection AddRepositories(this IServiceCollection services)
     {
+        // Repositorios de seguridad
         services.AddScoped<IRoleRepository, RoleRepository>();
         services.AddScoped<IPermissionRepository, PermissionRepository>();
+
+        // Repositorios de usuarios
+        services.AddScoped<IUserRepository, UserRepository>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Registra servicios de seguridad (JWT, Password Hashing).
+    /// </summary>
+    private static IServiceCollection AddSecurity(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        // Por esta línea correcta:
+        services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
+
+        // Validar opciones al iniciar la aplicación 
+        services.AddOptions<JwtOptions>()
+            .Validate(options =>
+            {
+                try
+                {
+                    options.Validate();
+                    return true;
+                }
+                catch
+                {
+                    return false;
+                }
+            }, "Configuración de JWT inválida. Verifica appsettings.json");
+
+        // Registrar servicios de seguridad
+        services.AddSingleton<IPasswordHasher, PasswordHasher>();
+        services.AddSingleton<IJwtTokenGenerator, JwtTokenGenerator>();
 
         return services;
     }

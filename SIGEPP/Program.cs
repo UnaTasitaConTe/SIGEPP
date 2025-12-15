@@ -1,13 +1,54 @@
+using System.Text;
+using Application.Auth;
+using Application.Users;
 using Infrastructure;
 using Infrastructure.Persistence;
+using Infrastructure.Security;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
-// Infrastructure services (DbContext, Repositories)
+// Infrastructure services (DbContext, Repositories, Security)
 builder.Services.AddInfrastructure(builder.Configuration, builder.Environment);
+
+// Application services
+builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<UserAppService>();
+
+// Configurar autenticación JWT
+var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>()
+    ?? throw new InvalidOperationException("Configuración de JWT no encontrada en appsettings.json");
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.SaveToken = true;
+    options.RequireHttpsMetadata = false; // En producción cambiar a true
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = jwtOptions.Issuer,
+        ValidAudience = jwtOptions.Audience,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.SecretKey)),
+        ClockSkew = TimeSpan.Zero // Eliminar tolerancia de tiempo (por defecto son 5 minutos)
+    };
+});
+
+// Configurar autorización
+builder.Services.AddAuthorization();
 
 builder.Services.AddControllers();
 
@@ -38,9 +79,11 @@ using (var scope = app.Services.CreateScope())
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    app.MapScalarApiReference();
 }
 
-
+// Middleware de autenticación y autorización
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();

@@ -28,18 +28,24 @@ SIGEPP/
 
 **Critical Rule:** Domain layer must NEVER reference Infrastructure or Application layers.
 
-### Domain Layer (Domain/Security/)
+### Domain Layer (Domain/Security/ and Domain/Users/)
 
 Contains pure domain logic with DDD patterns:
 
+**Security Module (Domain/Security/)**:
 - **Entities/Role.cs**: Aggregate root with identity (Id, Code, Name, Description, IsSystemRole) and permissions collection
 - **ValueObjects/Permission.cs**: Immutable value object in "module.action" format (e.g., "ppa.create")
 - **Catalogs/**: Static catalogs defining 22 permissions across 6 modules and 3 predefined roles (ADMIN, DOCENTE, CONSULTA_INTERNA)
 - **Repositories/**: Interface definitions only (IRoleRepository, IPermissionRepository)
 
+**Users Module (Domain/Users/)**:
+- **User.cs**: Aggregate root representing a user with identity, credentials, and role assignments
+- **IUserRepository.cs**: Repository interface for user persistence operations
+
 Key domain concepts:
 - **Permission Value Object**: Immutable, no identity, format validation enforced at construction
 - **Role Entity**: Has identity, contains permission collection, provides `HasPermission()` and `HasAllPermissions()` behavior
+- **User Entity**: Aggregate root managing user identity, password hash, and role assignments. Provides authorization through `HasPermission()` by delegating to assigned roles
 - **System Roles**: Marked with `IsSystemRole = true`, cannot be deleted
 
 ### Infrastructure Layer (Infrastructure/Persistence/)
@@ -57,7 +63,16 @@ Implements data persistence:
 
 ### Application Layer (Application/)
 
-Currently minimal - intended for CQRS commands/queries, application services, and DTOs. Ready for expansion.
+Contains application services, commands, and cross-cutting concerns:
+
+**Users Module (Application/Users/)**:
+- **UserAppService.cs**: Orchestrates user management use cases (create, update, activate/deactivate, role assignment)
+- **Commands/**: DTOs for user operations (CreateUserCommand, UpdateUserCommand)
+
+**Security Module (Application/Security/)**:
+- **IPasswordHasher.cs**: Interface for password hashing/verification (implementation in Infrastructure)
+
+The Application layer orchestrates domain logic without containing business rules. It coordinates between repositories, domain entities, and external services.
 
 ### Presentation Layer (SIGEPP/)
 
@@ -161,6 +176,180 @@ The system has 6 modules with 22 permissions total:
 - **DOCENTE** (10 permissions): Teacher access to own projects
 - **CONSULTA_INTERNA** (3 permissions): Read-only internal queries
 
+## Users and Authorization Model
+
+### User Entity (Domain/Users/User.cs)
+
+The `User` entity is an **aggregate root** in the domain that represents a user in SIGEPP. It manages user identity, authentication credentials, and role-based authorization.
+
+**Key Properties:**
+- `Id` (Guid): Unique identifier
+- `Name` (string): Full name of the user
+- `Email` (string): Email address (unique, normalized to lowercase)
+- `PasswordHash` (string): Hashed password - **never stores passwords in plain text**
+- `IsActive` (bool): Whether the user is active in the system
+- `CreatedAt` / `UpdatedAt` (DateTime): Audit timestamps
+- `Roles` (IReadOnlyCollection<Role>): Collection of assigned roles
+
+**Security Design:**
+- Passwords are NEVER stored in plain text
+- Email addresses are normalized to lowercase for consistency
+- Password hashing is delegated to `IPasswordHasher` (implemented in Infrastructure)
+- Role assignments are managed through domain methods, ensuring invariants
+
+### User Behavior (Domain Methods)
+
+The User entity provides rich behavior following DDD principles:
+
+**Identity Management:**
+- `Activate()` / `Deactivate()`: Enable/disable user access
+- `ChangeName(string name)`: Update user name with validation
+- `ChangeEmail(string email)`: Update email with format validation
+- `SetPasswordHash(string passwordHash)`: Update password hash (hash calculated externally)
+
+**Role Management:**
+- `AssignRole(Role role)`: Assign a role to the user (idempotent)
+- `RemoveRole(Role role)`: Remove a role from the user
+- `ClearRoles()`: Remove all roles
+- `HasRole(string roleCode)`: Check if user has a specific role
+
+**Authorization Queries:**
+- `HasPermission(Permission permission)`: Returns true if any of the user's roles has the permission
+- `HasPermission(string permissionCode)`: Check permission by code string
+- `HasAnyPermission(IEnumerable<Permission> permissions)`: Check if user has at least one permission
+- `HasAllPermissions(params Permission[] permissions)`: Check if user has all specified permissions
+- `GetAllPermissions()`: Returns union of all permissions from all roles
+
+**Factory Methods:**
+- `User.Create(...)`: Creates a new user with auto-generated ID
+- `User.CreateWithId(...)`: Creates user with specific ID (for seeds/migrations)
+
+### User-Role-Permission Relationship
+
+The authorization model in SIGEPP follows this hierarchy:
+
+```
+User → Roles → Permissions
+```
+
+**How it works:**
+1. A **User** can have multiple **Roles** (e.g., a user might be both ADMIN and DOCENTE)
+2. Each **Role** has multiple **Permissions** (e.g., ADMIN has 16 permissions)
+3. A **User's effective permissions** = union of all permissions from all assigned roles
+4. Authorization is checked via `user.HasPermission("ppa.create")` which delegates to the user's roles
+
+**Example:**
+```csharp
+// User with DOCENTE role
+var user = await userRepository.GetByIdAsync(userId);
+
+// Check specific permission
+bool canCreatePPA = user.HasPermission("ppa.create");  // true (DOCENTE has this)
+bool canCreatePeriod = user.HasPermission("periods.create");  // false (DOCENTE doesn't have this)
+
+// Check role
+bool isTeacher = user.HasRole("DOCENTE");  // true
+
+// Get all permissions
+var allPermissions = user.GetAllPermissions();  // Returns 10 permissions from DOCENTE role
+```
+
+### UserAppService (Application Layer)
+
+The `UserAppService` orchestrates user management use cases. It does NOT contain business logic - that lives in the domain.
+
+**Key Operations:**
+- `CreateUserAsync(CreateUserCommand)`: Creates a user, hashes password, assigns roles
+- `UpdateUserAsync(UpdateUserCommand)`: Updates user info and optionally reassigns roles
+- `ActivateUserAsync(userId)` / `DeactivateUserAsync(userId)`: Enable/disable users
+- `AssignRolesAsync(userId, roleCodes)`: Assign multiple roles to a user
+- `RemoveRoleAsync(userId, roleCode)`: Remove a role from a user
+- `GetUserPermissionsAsync(userId)`: Get all effective permissions for a user
+- `ChangePasswordAsync(userId, newPassword)`: Update user password
+- `UserHasPermissionAsync(userId, permissionCode)`: Check if user has a permission
+
+**Validation Logic:**
+- Email uniqueness is validated before creation
+- Email uniqueness is validated on update (excluding the user being updated)
+- Roles must exist before assignment (validates against `IRoleRepository`)
+- Password is hashed using `IPasswordHasher` before storing
+
+### IPasswordHasher Interface
+
+Located in `Application/Security/IPasswordHasher.cs`, this interface abstracts password hashing:
+
+```csharp
+public interface IPasswordHasher
+{
+    string HashPassword(string rawPassword);
+    bool VerifyPassword(string rawPassword, string passwordHash);
+}
+```
+
+**Implementation:** Will be in Infrastructure layer (e.g., using BCrypt, PBKDF2, or ASP.NET Core Identity's hasher)
+
+### Usage Examples
+
+**Creating a user with roles:**
+```csharp
+var command = new CreateUserCommand
+{
+    Name = "Juan Pérez",
+    Email = "juan.perez@fesc.edu.co",
+    RawPassword = "SecurePassword123!",
+    RoleCodes = new[] { "DOCENTE" },
+    IsActive = true
+};
+
+var userId = await userAppService.CreateUserAsync(command);
+```
+
+**Checking user permissions:**
+```csharp
+var user = await userRepository.GetByIdAsync(userId);
+
+// Check specific permission
+if (user.HasPermission(Permissions.PPA.Create))
+{
+    // User can create PPAs
+}
+
+// Check multiple permissions
+if (user.HasAllPermissions(Permissions.PPA.ViewOwn, Permissions.PPA.Update))
+{
+    // User can view and update their own PPAs
+}
+
+// Get all effective permissions
+var permissions = user.GetAllPermissions();
+foreach (var permission in permissions)
+{
+    Console.WriteLine($"- {permission.Value}");  // e.g., "ppa.create"
+}
+```
+
+**Managing user roles dynamically:**
+```csharp
+// Assign additional role
+await userAppService.AssignRolesAsync(userId, new[] { "ADMIN" });
+
+// Remove a role
+await userAppService.RemoveRoleAsync(userId, "DOCENTE");
+
+// Get user's current permissions
+var currentPermissions = await userAppService.GetUserPermissionsAsync(userId);
+// Returns: ["dashboard.view", "dashboard.view_details", "periods.create", ...]
+```
+
+**Activate/Deactivate users:**
+```csharp
+// Deactivate a user (e.g., when leaving the organization)
+await userAppService.DeactivateUserAsync(userId);
+
+// Reactivate later
+await userAppService.ActivateUserAsync(userId);
+```
+
 ## Key Design Patterns and Conventions
 
 ### Domain-Driven Design Principles
@@ -177,6 +366,11 @@ Infrastructure services registered via `builder.Services.AddInfrastructure()` in
 - ApplicationDbContext
 - IRoleRepository → RoleRepository
 - IPermissionRepository → PermissionRepository
+- IUserRepository → UserRepository
+- IPasswordHasher → PasswordHasher (BCrypt or ASP.NET Core Identity hasher)
+
+Application services should be registered in Program.cs or a separate Application DI extension:
+- UserAppService
 
 ### Permission Format Validation
 
@@ -250,19 +444,45 @@ public class SecurityTestController : ControllerBase
 ## Project Maturity
 
 **Current Status:**
-- ✅ Domain layer complete with DDD patterns
-- ✅ Infrastructure layer with EF Core and seeding
-- ✅ Database migrations ready
+- ✅ Domain layer complete with DDD patterns (Security + Users)
+- ✅ User entity with rich domain behavior (authorization, role management)
+- ✅ UserAppService for user management use cases
+- ✅ IPasswordHasher interface defined
+- ✅ Infrastructure layer with EF Core and seeding (Security module)
+- ✅ Database migrations ready (Security module)
 - ✅ DI container configured
-- ⚠️ Application layer mostly empty (ready for CQRS implementation)
+- ⚠️ User persistence in Infrastructure (pending: UserEntity, UserRepository, UserConfiguration, migrations)
+- ⚠️ IPasswordHasher implementation in Infrastructure (pending: BCrypt or ASP.NET Core Identity)
 - ❌ No controllers/endpoints implemented yet
-- ❌ No authentication/authorization middleware
+- ❌ No authentication middleware (JWT)
+- ❌ No authorization middleware (`[RequirePermission]` attributes)
 - ❌ No testing framework
 
 **Next Development Steps:**
-1. Implement Application layer (CQRS commands/queries)
-2. Create API controllers for role and permission management
-3. Add JWT authentication
-4. Implement authorization middleware and `[RequirePermission]` attributes
-5. Add User and UserRole entities for authentication
-6. Implement unit/integration/E2E tests
+1. **Infrastructure for Users**:
+   - Create UserEntity for EF Core
+   - Create UserRoleEntity for many-to-many relationship
+   - Implement UserRepository
+   - Implement PasswordHasher (using BCrypt or ASP.NET Core Identity)
+   - Create migration for Users and UserRoles tables
+   - Create seed data for initial admin user
+
+2. **Authentication**:
+   - Implement JWT token generation/validation
+   - Create LoginCommand and AuthService
+   - Add authentication middleware
+
+3. **Authorization**:
+   - Create `[RequirePermission]` attribute
+   - Implement authorization middleware
+   - Add authorization policies
+
+4. **API Controllers**:
+   - Users controller (CRUD, role assignment)
+   - Auth controller (login, refresh token)
+   - Roles controller (view roles and permissions)
+
+5. **Testing**:
+   - Unit tests for Domain entities (User, Role, Permission)
+   - Integration tests for UserRepository
+   - E2E tests for authentication/authorization flow

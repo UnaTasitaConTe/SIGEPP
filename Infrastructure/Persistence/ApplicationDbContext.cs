@@ -21,16 +21,25 @@ public class ApplicationDbContext : DbContext
     public DbSet<PermissionEntity> Permissions => Set<PermissionEntity>();
     public DbSet<RolePermissionEntity> RolePermissions => Set<RolePermissionEntity>();
 
+    // DbSets - Usuarios
+    public DbSet<UserEntity> Users => Set<UserEntity>();
+    public DbSet<UserRoleEntity> UserRoles => Set<UserRoleEntity>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
 
-        // Aplicar configuraciones Fluent API
+        // Aplicar configuraciones Fluent API - Seguridad
         modelBuilder.ApplyConfiguration(new RoleConfiguration());
         modelBuilder.ApplyConfiguration(new PermissionConfiguration());
         modelBuilder.ApplyConfiguration(new RolePermissionConfiguration());
 
+        // Aplicar configuraciones Fluent API - Usuarios
+        modelBuilder.ApplyConfiguration(new UserConfiguration());
+        modelBuilder.ApplyConfiguration(new UserRoleConfiguration());
+
         // Aplicar seeds
         SecuritySeed.Seed(modelBuilder);
+        UserSeed.Seed(modelBuilder);
     }
 }
