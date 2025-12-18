@@ -27,6 +27,10 @@ builder.Services.AddScoped<AcademicPeriodsAppService>();
 builder.Services.AddScoped<SubjectsAppService>();
 builder.Services.AddScoped<TeacherAssignmentsAppService>();
 
+// Application services - Módulo PPA
+builder.Services.AddScoped<Application.Ppa.PpaAppService>();
+builder.Services.AddScoped<Application.Ppa.PpaAttachmentsAppService>();
+
 // Configurar autenticación JWT
 var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>()
     ?? throw new InvalidOperationException("Configuración de JWT no encontrada en appsettings.json");
@@ -56,6 +60,18 @@ builder.Services.AddAuthentication(options =>
 
 // Configurar autorización basada en permisos
 builder.Services.AddSigeppAuthorizationPolicies();
+
+// Configurar CORS para permitir peticiones desde el frontend
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        policy.WithOrigins("http://localhost:3000", "http://localhost:5173") // Ajustar según el puerto del frontend
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials();
+    });
+});
 
 builder.Services.AddControllers();
 
@@ -88,6 +104,9 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
     app.MapScalarApiReference();
 }
+
+// CORS debe ir antes de autenticación
+app.UseCors();
 
 // Middleware de autenticación y autorización
 app.UseAuthentication();

@@ -1,7 +1,9 @@
 using Infrastructure.Persistence.Configurations;
 using Infrastructure.Persistence.Configurations.Academics;
+using Infrastructure.Persistence.Configurations.Ppa;
 using Infrastructure.Persistence.Entities;
 using Infrastructure.Persistence.Entities.Academics;
+using Infrastructure.Persistence.Entities.Ppa;
 using Infrastructure.Persistence.Seeds;
 using Microsoft.EntityFrameworkCore;
 
@@ -32,6 +34,11 @@ public class ApplicationDbContext : DbContext
     public DbSet<SubjectEntity> Subjects => Set<SubjectEntity>();
     public DbSet<TeacherAssignmentEntity> TeacherAssignments => Set<TeacherAssignmentEntity>();
 
+    // DbSets - PPA
+    public DbSet<PpaEntity> Ppas => Set<PpaEntity>();
+    public DbSet<PpaAttachmentEntity> PpaAttachments => Set<PpaAttachmentEntity>();
+    public DbSet<PpaTeacherAssignmentEntity> PpaTeacherAssignments => Set<PpaTeacherAssignmentEntity>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -49,6 +56,11 @@ public class ApplicationDbContext : DbContext
         modelBuilder.ApplyConfiguration(new AcademicPeriodConfiguration());
         modelBuilder.ApplyConfiguration(new SubjectConfiguration());
         modelBuilder.ApplyConfiguration(new TeacherAssignmentConfiguration());
+
+        // Aplicar configuraciones Fluent API - PPA
+        modelBuilder.ApplyConfiguration(new PpaConfiguration());
+        modelBuilder.ApplyConfiguration(new PpaAttachmentConfiguration());
+        modelBuilder.ApplyConfiguration(new PpaTeacherAssignmentConfiguration());
 
         // Aplicar seeds
         SecuritySeed.Seed(modelBuilder);

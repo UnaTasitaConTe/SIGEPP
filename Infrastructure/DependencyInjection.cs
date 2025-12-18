@@ -1,15 +1,21 @@
 using Application.Security;
+using Application.Storage;
 using Domain.Academics.Repositories;
+using Domain.Ppa.Repositories;
 using Domain.Security.Repositories;
 using Domain.Users;
 using Infrastructure.Persistence;
 using Infrastructure.Persistence.Repositories;
 using Infrastructure.Persistence.Repositories.Academics;
+using Infrastructure.Persistence.Repositories.Ppa;
 using Infrastructure.Security;
+using Infrastructure.Storage;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
+using Minio;
 
 namespace Infrastructure;
 
@@ -36,6 +42,9 @@ public static class DependencyInjection
 
         // Registrar servicios de seguridad
         services.AddSecurity(configuration);
+
+        // Registrar servicios de almacenamiento
+        services.AddStorage(configuration);
 
         return services;
     }
@@ -103,6 +112,10 @@ public static class DependencyInjection
         services.AddScoped<ISubjectRepository, SubjectRepository>();
         services.AddScoped<ITeacherAssignmentRepository, TeacherAssignmentRepository>();
 
+        // Repositorios de PPA
+        services.AddScoped<IPpaRepository, PpaRepository>();
+        services.AddScoped<IPpaAttachmentRepository, PpaAttachmentRepository>();
+
         return services;
     }
 
@@ -134,6 +147,39 @@ public static class DependencyInjection
         // Registrar servicios de seguridad
         services.AddSingleton<IPasswordHasher, PasswordHasher>();
         services.AddSingleton<IJwtTokenGenerator, JwtTokenGenerator>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Registra servicios de almacenamiento de archivos (MinIO).
+    /// </summary>
+    private static IServiceCollection AddStorage(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        // Configurar opciones de MinIO desde appsettings
+        services.Configure<MinioOptions>(configuration.GetSection(MinioOptions.SectionName));
+
+        // Registrar MinioClient como singleton
+        services.AddSingleton<IMinioClient>(sp =>
+        {
+            var options = sp.GetRequiredService<IOptions<MinioOptions>>().Value;
+
+            var clientBuilder = new MinioClient()
+                .WithEndpoint(options.Endpoint, options.Port)
+                .WithCredentials(options.AccessKey, options.SecretKey);
+
+            if (options.UseSsl)
+            {
+                clientBuilder = clientBuilder.WithSSL();
+            }
+
+            return clientBuilder.Build();
+        });
+
+        // Registrar servicio de almacenamiento
+        services.AddSingleton<IFileStorageService, MinioFileStorageService>();
 
         return services;
     }
