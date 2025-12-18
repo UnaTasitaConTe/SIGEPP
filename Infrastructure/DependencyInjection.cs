@@ -1,8 +1,10 @@
 using Application.Security;
+using Domain.Academics.Repositories;
 using Domain.Security.Repositories;
 using Domain.Users;
 using Infrastructure.Persistence;
 using Infrastructure.Persistence.Repositories;
+using Infrastructure.Persistence.Repositories.Academics;
 using Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -95,6 +97,11 @@ public static class DependencyInjection
 
         // Repositorios de usuarios
         services.AddScoped<IUserRepository, UserRepository>();
+
+        // Repositorios de módulo académico
+        services.AddScoped<IAcademicPeriodRepository, AcademicPeriodRepository>();
+        services.AddScoped<ISubjectRepository, SubjectRepository>();
+        services.AddScoped<ITeacherAssignmentRepository, TeacherAssignmentRepository>();
 
         return services;
     }

@@ -1,0 +1,39 @@
+using System.ComponentModel.DataAnnotations;
+
+namespace Application.Academics.Commands;
+
+/// <summary>
+/// Comando para actualizar un período académico existente.
+/// </summary>
+public class UpdateAcademicPeriodCommand
+{
+    /// <summary>
+    /// ID del período académico a actualizar.
+    /// </summary>
+    [Required(ErrorMessage = "El ID del período académico es requerido.")]
+    public Guid Id { get; set; }
+
+    /// <summary>
+    /// Código único del período académico (ej: "2024-1", "2024-2").
+    /// </summary>
+    [Required(ErrorMessage = "El código del período académico es requerido.")]
+    [StringLength(20, MinimumLength = 1, ErrorMessage = "El código debe tener entre 1 y 20 caracteres.")]
+    public string Code { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Nombre descriptivo del período académico (ej: "Periodo 2024-1").
+    /// </summary>
+    [Required(ErrorMessage = "El nombre del período académico es requerido.")]
+    [StringLength(200, MinimumLength = 3, ErrorMessage = "El nombre debe tener entre 3 y 200 caracteres.")]
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Fecha de inicio del período académico (opcional).
+    /// </summary>
+    public DateOnly? StartDate { get; set; }
+
+    /// <summary>
+    /// Fecha de fin del período académico (opcional).
+    /// </summary>
+    public DateOnly? EndDate { get; set; }
+}

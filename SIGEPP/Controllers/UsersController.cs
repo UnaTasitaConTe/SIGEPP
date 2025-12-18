@@ -13,7 +13,7 @@ namespace SIGEPP.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
-///[Authorize] // Todos los endpoints requieren autenticación
+[Authorize(Roles="ADMIN")] // Todos los endpoints requieren autenticación
 public class UsersController : ControllerBase
 {
     private readonly UserAppService _userAppService;

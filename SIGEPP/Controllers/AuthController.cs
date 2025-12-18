@@ -96,7 +96,7 @@ public class AuthController : ControllerBase
         // Extraer información del token JWT (claims)
         var userId = User.FindFirst("userId")?.Value;
         var email = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;
-        var name = User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value;
+        var name = User.FindFirst("name")?.Value;
         var roles = User.FindAll(System.Security.Claims.ClaimTypes.Role)
             .Select(c => c.Value)
             .ToList();

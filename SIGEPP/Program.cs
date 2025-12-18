@@ -1,4 +1,5 @@
 using System.Text;
+using Application.Academics;
 using Application.Auth;
 using Application.Users;
 using Infrastructure;
@@ -8,6 +9,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
+using SIGEPP.Authorization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,6 +21,11 @@ builder.Services.AddInfrastructure(builder.Configuration, builder.Environment);
 // Application services
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<UserAppService>();
+
+// Application services - Módulo académico
+builder.Services.AddScoped<AcademicPeriodsAppService>();
+builder.Services.AddScoped<SubjectsAppService>();
+builder.Services.AddScoped<TeacherAssignmentsAppService>();
 
 // Configurar autenticación JWT
 var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>()
@@ -47,8 +54,8 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-// Configurar autorización
-builder.Services.AddAuthorization();
+// Configurar autorización basada en permisos
+builder.Services.AddSigeppAuthorizationPolicies();
 
 builder.Services.AddControllers();
 
