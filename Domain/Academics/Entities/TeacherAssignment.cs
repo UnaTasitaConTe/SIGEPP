@@ -19,7 +19,13 @@ public sealed class TeacherAssignment
         Guid subjectId,
         Guid academicPeriodId,
         bool isActive,
-        DateTime createdAt)
+        DateTime createdAt,
+        string? teacherName,
+        string? subjectCode,
+        string? subjectName,
+        string? academicPeriodCode,
+        string? academicPeriodName
+        )
     {
         if (teacherId == Guid.Empty)
             throw new ArgumentException("El ID del docente no puede ser vacío.", nameof(teacherId));
@@ -34,9 +40,15 @@ public sealed class TeacherAssignment
         TeacherId = teacherId;
         SubjectId = subjectId;
         AcademicPeriodId = academicPeriodId;
+        SubjectName = subjectName;
+        SubjectCode = subjectCode;
+        TeacherName = teacherName;
+        AcademicPeriodCode = academicPeriodCode;
+        AcademicPeriodName = academicPeriodName;
         IsActive = isActive;
         CreatedAt = createdAt;
         UpdatedAt = createdAt;
+
     }
 
     /// <summary>
@@ -74,6 +86,12 @@ public sealed class TeacherAssignment
     /// </summary>
     public DateTime UpdatedAt { get; private set; }
 
+    public string? TeacherName { get; private set; }
+    public string? SubjectCode { get; private set; }
+    public string? SubjectName { get; private set; }
+    public string? AcademicPeriodCode { get; private set; }
+    public string? AcademicPeriodName { get; private set; }
+
     /// <summary>
     /// Crea una nueva asignación docente.
     /// </summary>
@@ -86,7 +104,13 @@ public sealed class TeacherAssignment
         Guid teacherId,
         Guid subjectId,
         Guid academicPeriodId,
-        bool isActive = true)
+        string teacherName,
+        string subjectCode,
+        string subjectName,
+        string academicPeriodCode,
+        string academicPeriodName,
+        bool isActive = true
+        )
     {
         return new TeacherAssignment(
             Guid.NewGuid(),
@@ -94,7 +118,13 @@ public sealed class TeacherAssignment
             subjectId,
             academicPeriodId,
             isActive,
-            DateTime.UtcNow);
+            DateTime.UtcNow,
+            teacherName,
+            subjectCode,
+            subjectName,
+            academicPeriodCode,
+            academicPeriodName
+            );
     }
 
     /// <summary>
@@ -111,6 +141,11 @@ public sealed class TeacherAssignment
         Guid teacherId,
         Guid subjectId,
         Guid academicPeriodId,
+        string? teacherName,
+        string? subjectCode,
+        string? subjectName,
+        string? academicPeriodCode,
+        string? academicPeriodName,
         bool isActive = true)
     {
         return new TeacherAssignment(
@@ -119,7 +154,13 @@ public sealed class TeacherAssignment
             subjectId,
             academicPeriodId,
             isActive,
-            DateTime.UtcNow);
+            DateTime.UtcNow,
+            teacherName,
+            subjectCode,
+            subjectName,
+            academicPeriodCode,
+            academicPeriodName
+            );
     }
 
     /// <summary>

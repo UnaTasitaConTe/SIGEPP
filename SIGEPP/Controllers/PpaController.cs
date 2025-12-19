@@ -12,7 +12,6 @@ namespace SIGEPP.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = "ADMIN,DOCENTE,CONSULTA_INTERNA")]
 public class PpaController : ControllerBase
 {
     private readonly PpaAppService _ppaAppService;
@@ -36,6 +35,7 @@ public class PpaController : ControllerBase
     /// <response code="404">PPA no encontrado.</response>
     /// <response code="401">No autenticado.</response>
     [HttpGet("{id:guid}")]
+    [Authorize(Policy = "Ppa.View")] // (view_all OR view_own)
     [ProducesResponseType(typeof(PpaDetailDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -75,6 +75,7 @@ public class PpaController : ControllerBase
     /// <response code="400">Parámetros inválidos.</response>
     /// <response code="401">No autenticado.</response>
     [HttpGet("by-period")]
+    [Authorize(Policy = "Ppa.View")]
     [ProducesResponseType(typeof(IReadOnlyCollection<PpaDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -124,6 +125,7 @@ public class PpaController : ControllerBase
     /// Por ahora se pasa como parámetro de query.
     /// </remarks>
     [HttpGet("by-teacher")]
+    [Authorize(Policy = "Ppa.View")]
     [ProducesResponseType(typeof(IReadOnlyCollection<PpaDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -176,7 +178,7 @@ public class PpaController : ControllerBase
     /// <response code="401">No autenticado.</response>
     /// <response code="403">No tiene permisos (requiere rol ADMIN o DOCENTE).</response>
     [HttpPost]
-    [Authorize(Roles = "ADMIN,DOCENTE")]
+    [Authorize(Policy = "Ppa.Create")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -247,7 +249,7 @@ public class PpaController : ControllerBase
     /// <response code="401">No autenticado.</response>
     /// <response code="403">No tiene permisos (requiere rol ADMIN o DOCENTE).</response>
     [HttpPut("{id:guid}")]
-    [Authorize(Roles = "ADMIN,DOCENTE")]
+    [Authorize(Policy = "Ppa.Update")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -310,7 +312,7 @@ public class PpaController : ControllerBase
     /// y se hará cuando se integren los servicios de PPA y PpaAttachments.
     /// </remarks>
     [HttpPost("{id:guid}/status")]
-    [Authorize(Roles = "ADMIN")]
+    [Authorize(Policy = "Ppa.ChangeStatus")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

@@ -13,5 +13,6 @@ public static class SecuritySeed
         PermissionSeed.Seed(modelBuilder);
         RoleSeed.Seed(modelBuilder);
         RolePermissionSeed.Seed(modelBuilder);
+        SubjectSeeder.Seed(modelBuilder);
     }
 }

@@ -22,6 +22,9 @@ public class TeacherAssignmentRepository : ITeacherAssignmentRepository
     public async Task<TeacherAssignment?> GetByIdAsync(Guid id, CancellationToken ct = default)
     {
         var entity = await _context.TeacherAssignments
+            .Include(x => x.Teacher)
+            .Include(x => x.AcademicPeriod)
+            .Include(x => x.Subject)
             .FirstOrDefaultAsync(ta => ta.Id == id, ct);
 
         return entity == null ? null : MapToDomain(entity);
@@ -33,6 +36,9 @@ public class TeacherAssignmentRepository : ITeacherAssignmentRepository
         CancellationToken ct = default)
     {
         var entities = await _context.TeacherAssignments
+            .Include(x => x.Teacher)
+            .Include(x => x.AcademicPeriod)
+            .Include(x => x.Subject)
             .Where(ta => ta.TeacherId == teacherId && ta.AcademicPeriodId == academicPeriodId)
             .OrderBy(ta => ta.CreatedAt)
             .ToListAsync(ct);
@@ -46,6 +52,9 @@ public class TeacherAssignmentRepository : ITeacherAssignmentRepository
         CancellationToken ct = default)
     {
         var entities = await _context.TeacherAssignments
+            .Include(x => x.Teacher)
+            .Include(x => x.AcademicPeriod)
+            .Include(x => x.Subject)
             .Where(ta => ta.TeacherId == teacherId
                 && ta.AcademicPeriodId == academicPeriodId
                 && ta.IsActive)
@@ -61,6 +70,9 @@ public class TeacherAssignmentRepository : ITeacherAssignmentRepository
         CancellationToken ct = default)
     {
         var entities = await _context.TeacherAssignments
+            .Include(x => x.Teacher)
+            .Include(x => x.AcademicPeriod)
+            .Include(x => x.Subject)
             .Where(ta => ta.SubjectId == subjectId && ta.AcademicPeriodId == academicPeriodId)
             .OrderBy(ta => ta.CreatedAt)
             .ToListAsync(ct);
@@ -73,6 +85,9 @@ public class TeacherAssignmentRepository : ITeacherAssignmentRepository
         CancellationToken ct = default)
     {
         var entities = await _context.TeacherAssignments
+            .Include(x => x.Teacher)
+            .Include(x => x.AcademicPeriod)
+            .Include(x => x.Subject)
             .Where(ta => ta.AcademicPeriodId == academicPeriodId)
             .OrderBy(ta => ta.TeacherId)
             .ThenBy(ta => ta.SubjectId)
@@ -86,6 +101,9 @@ public class TeacherAssignmentRepository : ITeacherAssignmentRepository
         CancellationToken ct = default)
     {
         var entities = await _context.TeacherAssignments
+            .Include(x=>x.Teacher)
+            .Include(x=>x.AcademicPeriod)
+            .Include(x=>x.Subject)
             .Where(ta => ta.AcademicPeriodId == academicPeriodId && ta.IsActive)
             .OrderBy(ta => ta.TeacherId)
             .ThenBy(ta => ta.SubjectId)
@@ -189,8 +207,13 @@ public class TeacherAssignmentRepository : ITeacherAssignmentRepository
             teacherId: entity.TeacherId,
             subjectId: entity.SubjectId,
             academicPeriodId: entity.AcademicPeriodId,
-            isActive: entity.IsActive);
-
+            isActive: entity.IsActive,
+            teacherName : entity.Teacher?.Name ?? string.Empty,
+            subjectCode : entity.Subject?.Code ?? string.Empty,
+            subjectName : entity.Subject?.Name ?? string.Empty,
+            academicPeriodCode : entity.AcademicPeriod?.Code ?? string.Empty,
+            academicPeriodName : entity.AcademicPeriod?.Name ?? string.Empty
+            );
         // Restaurar las fechas usando reflection (propiedades con private set)
         var createdAtProperty = typeof(TeacherAssignment).GetProperty(
             nameof(TeacherAssignment.CreatedAt),

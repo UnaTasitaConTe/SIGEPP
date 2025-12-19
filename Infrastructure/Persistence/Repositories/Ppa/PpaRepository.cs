@@ -47,7 +47,12 @@ public sealed class PpaRepository : IPpaRepository
         CancellationToken ct = default)
     {
         var entities = await _context.Ppas
+                .Include(p => p.PrimaryTeacher) // ✅ navegación directa
+
             .Include(p => p.PpaTeacherAssignments)
+            .ThenInclude(pta => pta.TeacherAssignment)
+                        .ThenInclude(ta => ta.Teacher)
+
             .Where(p => p.AcademicPeriodId == academicPeriodId)
             .OrderBy(p => p.Title)
             .ToListAsync(ct);
@@ -226,6 +231,11 @@ public sealed class PpaRepository : IPpaRepository
     /// </summary>
     private Domain.Ppa.Entities.Ppa MapToDomain(PpaEntity entity)
     {
+
+        string? teacherNamePrimary = entity.PpaTeacherAssignments
+            .Where(x => x.TeacherAssignment?.Teacher?.Id == entity.PrimaryTeacherId)
+            .Select(x => x.TeacherAssignment?.Teacher?.Name).FirstOrDefault();
+
         // Crear el PPA usando el método de fábrica con ID específico
         var ppa = Domain.Ppa.Entities.Ppa.CreateWithId(
             id: entity.Id,
@@ -237,6 +247,7 @@ public sealed class PpaRepository : IPpaRepository
             generalObjective: entity.GeneralObjective,
             specificObjectives: entity.SpecificObjectives,
             description: entity.Description,
+            teacherPrimaryName : teacherNamePrimary,
             updatedAt: entity.UpdatedAt);
 
         // Restaurar las asignaciones de docentes usando reflection

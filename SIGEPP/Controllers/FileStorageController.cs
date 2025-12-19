@@ -11,7 +11,7 @@ namespace SIGEPP.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = "ADMIN,DOCENTE")]
+[Authorize(Policy = "Ppa.UploadFile")]
 public sealed class FileStorageController : ControllerBase
 {
     private readonly IFileStorageService _fileStorageService;

@@ -235,6 +235,18 @@ public static class AuthorizationExtensions
             /// </summary>
             options.AddPolicy("Dashboard.ViewDetails", policy =>
                 policy.Requirements.Add(new PermissionRequirement("dashboard.view_details")));
+
+            options.AddPolicy("Ppa.View", policy =>
+                policy.RequireAssertion(ctx =>
+                    ctx.User.HasClaim("permission", "ppa.view_all") ||
+                    ctx.User.HasClaim("permission", "ppa.view_own")));
+
+            options.AddPolicy("Resources.View", policy =>
+                policy.RequireAssertion(ctx =>
+                    ctx.User.HasClaim("permission", "resources.view_all") ||
+                    ctx.User.HasClaim("permission", "resources.view_own")));
+
+
         });
 
         return services;

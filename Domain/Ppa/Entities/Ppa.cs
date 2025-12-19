@@ -68,6 +68,8 @@ public sealed class Ppa
     /// </summary>
     public DateTime? UpdatedAt { get; private set; }
 
+    public string? TeacherPrimaryName { get; private set; }
+
     // Constructor privado para control total sobre la creación
     private Ppa(
         Guid id,
@@ -75,7 +77,8 @@ public sealed class Ppa
         Guid academicPeriodId,
         Guid primaryTeacherId,
         PpaStatus status,
-        DateTime createdAt)
+        DateTime createdAt,
+        string? teacherPrimaryName)
     {
         Id = id;
         Title = title;
@@ -83,6 +86,7 @@ public sealed class Ppa
         PrimaryTeacherId = primaryTeacherId;
         Status = status;
         CreatedAt = createdAt;
+        TeacherPrimaryName = teacherPrimaryName;
     }
 
     /// <summary>
@@ -102,7 +106,8 @@ public sealed class Ppa
         Guid primaryTeacherId,
         string? generalObjective = null,
         string? specificObjectives = null,
-        string? description = null)
+        string? description = null,
+        string? teacherPrimaryName = null)
     {
         if (string.IsNullOrWhiteSpace(title))
             throw new ArgumentException("El título del PPA es obligatorio.", nameof(title));
@@ -119,7 +124,8 @@ public sealed class Ppa
             academicPeriodId,
             primaryTeacherId,
             PpaStatus.Proposal,
-            DateTime.UtcNow)
+            DateTime.UtcNow,
+            teacherPrimaryName)
         {
             GeneralObjective = generalObjective?.Trim(),
             SpecificObjectives = specificObjectives?.Trim(),
@@ -142,7 +148,8 @@ public sealed class Ppa
         string? generalObjective = null,
         string? specificObjectives = null,
         string? description = null,
-        DateTime? updatedAt = null)
+        DateTime? updatedAt = null,
+        string? teacherPrimaryName = null)
     {
         if (id == Guid.Empty)
             throw new ArgumentException("El ID del PPA no puede estar vacío.", nameof(id));
@@ -156,7 +163,7 @@ public sealed class Ppa
         if (primaryTeacherId == Guid.Empty)
             throw new ArgumentException("El ID del docente principal no puede estar vacío.", nameof(primaryTeacherId));
 
-        var ppa = new Ppa(id, title.Trim(), academicPeriodId, primaryTeacherId, status, createdAt)
+        var ppa = new Ppa(id, title.Trim(), academicPeriodId, primaryTeacherId, status, createdAt, teacherPrimaryName)
         {
             GeneralObjective = generalObjective?.Trim(),
             SpecificObjectives = specificObjectives?.Trim(),

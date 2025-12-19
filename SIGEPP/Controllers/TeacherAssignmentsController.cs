@@ -12,7 +12,7 @@ namespace SIGEPP.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = "ADMIN")]
+[Authorize(Policy = "TeacherSubjects.Manage")]
 public class TeacherAssignmentsController : ControllerBase
 {
     private readonly TeacherAssignmentsAppService _teacherAssignmentsAppService;

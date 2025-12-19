@@ -12,7 +12,6 @@ namespace SIGEPP.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = "ADMIN")]
 public class SubjectsController : ControllerBase
 {
     private readonly SubjectsAppService _subjectsAppService;
@@ -35,6 +34,7 @@ public class SubjectsController : ControllerBase
     /// <response code="200">Lista de asignaturas obtenida exitosamente.</response>
     /// <response code="401">No autenticado.</response>
     [HttpGet]
+    [Authorize(Policy = "Subjects.View")]
     [ProducesResponseType(typeof(IReadOnlyCollection<SubjectDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetAll(
@@ -73,6 +73,7 @@ public class SubjectsController : ControllerBase
     /// <response code="404">Asignatura no encontrada.</response>
     /// <response code="401">No autenticado.</response>
     [HttpGet("{id:guid}")]
+    [Authorize(Policy = "Subjects.View")]
     [ProducesResponseType(typeof(SubjectDetailDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -111,6 +112,7 @@ public class SubjectsController : ControllerBase
     /// <response code="400">Datos inválidos o código ya en uso.</response>
     /// <response code="401">No autenticado.</response>
     [HttpPost]
+    [Authorize(Policy = "Subjects.Create")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -166,6 +168,7 @@ public class SubjectsController : ControllerBase
     /// <response code="409">El ID no coincide con el cuerpo de la petición.</response>
     /// <response code="401">No autenticado.</response>
     [HttpPut("{id:guid}")]
+    [Authorize(Policy = "Subjects.Update")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -218,6 +221,7 @@ public class SubjectsController : ControllerBase
     /// <response code="404">Asignatura no encontrada.</response>
     /// <response code="401">No autenticado.</response>
     [HttpPost("{id:guid}/activate")]
+    [Authorize(Policy = "Subjects.Deactivate")] // ✅ mismo permiso para re-activar (cambio de estado)
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -257,6 +261,7 @@ public class SubjectsController : ControllerBase
     /// <response code="404">Asignatura no encontrada.</response>
     /// <response code="401">No autenticado.</response>
     [HttpPost("{id:guid}/deactivate")]
+    [Authorize(Policy = "Subjects.Deactivate")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]

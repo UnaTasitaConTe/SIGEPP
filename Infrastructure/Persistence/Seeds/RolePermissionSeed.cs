@@ -101,6 +101,23 @@ public static class RolePermissionSeed
         // Dashboard - Básico
         rolePermissions.Add(new RolePermissionEntity { RoleId = ConsultaInternaRoleId, PermissionId = DashboardView });
 
+        rolePermissions.Add(new RolePermissionEntity { RoleId = AdminRoleId, PermissionId = PpaCreate });
+        // ✅ Catálogos académicos - Solo lectura
+        rolePermissions.Add(new RolePermissionEntity { RoleId = ConsultaInternaRoleId, PermissionId = PeriodsView });
+        rolePermissions.Add(new RolePermissionEntity { RoleId = ConsultaInternaRoleId, PermissionId = SubjectsView });
+
+        // ✅ Períodos - Solo lectura (útil para formularios/selecciones)
+        rolePermissions.Add(new RolePermissionEntity { RoleId = DocenteRoleId, PermissionId = PeriodsView });
+
+        // ✅ Dashboard - Básico (si el docente ve panel)
+        rolePermissions.Add(new RolePermissionEntity { RoleId = DocenteRoleId, PermissionId = DashboardView });
+
+        // ✅ Recursos - Gestión completa (opcional si Admin debe administrar anexos)
+        rolePermissions.Add(new RolePermissionEntity { RoleId = AdminRoleId, PermissionId = ResourcesCreate });
+        rolePermissions.Add(new RolePermissionEntity { RoleId = AdminRoleId, PermissionId = ResourcesUpdate });
+        rolePermissions.Add(new RolePermissionEntity { RoleId = AdminRoleId, PermissionId = ResourcesDelete });
+
+
         modelBuilder.Entity<RolePermissionEntity>().HasData(rolePermissions);
     }
 }

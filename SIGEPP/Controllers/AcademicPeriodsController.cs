@@ -12,7 +12,6 @@ namespace SIGEPP.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = "ADMIN")]
 public class AcademicPeriodsController : ControllerBase
 {
     private readonly AcademicPeriodsAppService _academicPeriodsAppService;
@@ -35,6 +34,7 @@ public class AcademicPeriodsController : ControllerBase
     /// <response code="200">Lista de períodos obtenida exitosamente.</response>
     /// <response code="401">No autenticado.</response>
     [HttpGet]
+    [Authorize(Policy = "Periods.View")]
     [ProducesResponseType(typeof(IReadOnlyCollection<AcademicPeriodDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetAll(
@@ -73,6 +73,7 @@ public class AcademicPeriodsController : ControllerBase
     /// <response code="404">Período académico no encontrado.</response>
     /// <response code="401">No autenticado.</response>
     [HttpGet("{id:guid}")]
+    [Authorize(Policy = "Periods.View")]
     [ProducesResponseType(typeof(AcademicPeriodDetailDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -111,6 +112,7 @@ public class AcademicPeriodsController : ControllerBase
     /// <response code="400">Datos inválidos o código ya en uso.</response>
     /// <response code="401">No autenticado.</response>
     [HttpPost]
+    [Authorize(Policy = "Periods.Create")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -166,6 +168,7 @@ public class AcademicPeriodsController : ControllerBase
     /// <response code="409">El ID no coincide con el cuerpo de la petición.</response>
     /// <response code="401">No autenticado.</response>
     [HttpPut("{id:guid}")]
+    [Authorize(Policy = "Periods.Update")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -218,6 +221,7 @@ public class AcademicPeriodsController : ControllerBase
     /// <response code="404">Período académico no encontrado.</response>
     /// <response code="401">No autenticado.</response>
     [HttpPost("{id:guid}/activate")]
+    [Authorize(Policy = "Periods.Deactivate")] // ✅ mismo permiso para cambio de estado
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -257,6 +261,7 @@ public class AcademicPeriodsController : ControllerBase
     /// <response code="404">Período académico no encontrado.</response>
     /// <response code="401">No autenticado.</response>
     [HttpPost("{id:guid}/deactivate")]
+    [Authorize(Policy = "Periods.Deactivate")] // ✅ mismo permiso para cambio de estado
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]

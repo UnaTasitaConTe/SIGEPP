@@ -14,7 +14,6 @@ namespace SIGEPP.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = "ADMIN,DOCENTE,CONSULTA_INTERNA")]
 public class PpaAttachmentsController : ControllerBase
 {
     private readonly PpaAttachmentsAppService _ppaAttachmentsAppService;
@@ -38,6 +37,8 @@ public class PpaAttachmentsController : ControllerBase
     /// <response code="404">PPA no encontrado.</response>
     /// <response code="401">No autenticado.</response>
     [HttpGet("by-ppa/{ppaId:guid}")]
+    [Authorize(Policy = "Resources.View")] // ✅ view_all OR view_own (con validación de ownership)
+
     [ProducesResponseType(typeof(IReadOnlyCollection<PpaAttachmentDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -86,6 +87,8 @@ public class PpaAttachmentsController : ControllerBase
     /// <response code="404">PPA no encontrado.</response>
     /// <response code="401">No autenticado.</response>
     [HttpGet("by-ppa-and-type")]
+    [Authorize(Policy = "Resources.View")] // ✅ view_all OR view_own (con validación de ownership)
+
     [ProducesResponseType(typeof(IReadOnlyCollection<PpaAttachmentDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -149,7 +152,7 @@ public class PpaAttachmentsController : ControllerBase
     /// <response code="401">No autenticado o token sin userId.</response>
     /// <response code="403">No tiene permisos (requiere rol ADMIN o DOCENTE).</response>
     [HttpPost("{ppaId:guid}")]
-    [Authorize(Roles = "ADMIN,DOCENTE")]
+    [Authorize(Policy = "Resources.Create")] // ✅
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -239,7 +242,7 @@ public class PpaAttachmentsController : ControllerBase
     /// PpaDocument si el PPA está en estado Completed.
     /// </remarks>
     [HttpDelete("{attachmentId:guid}")]
-    [Authorize(Roles = "ADMIN,DOCENTE")]
+    [Authorize(Policy = "Resources.Delete")] // ✅
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]

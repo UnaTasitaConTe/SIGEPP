@@ -135,6 +135,11 @@ public sealed class TeacherAssignmentsAppService
             teacherId: command.TeacherId,
             subjectId: command.SubjectId,
             academicPeriodId: command.AcademicPeriodId,
+            academicPeriodCode : string.Empty,
+            academicPeriodName : string.Empty,
+            subjectCode : string.Empty,
+            subjectName : string.Empty,
+            teacherName : string.Empty,
             isActive: true);
 
         // Guardar la asignación
@@ -204,11 +209,11 @@ public sealed class TeacherAssignmentsAppService
             IsActive = assignment.IsActive,
             // Los campos adicionales (nombres) se pueden poblar desde los repositorios si es necesario
             // Por ahora los dejamos null, pero en el futuro se pueden agregar joins o consultas adicionales
-            TeacherName = null,
-            SubjectCode = null,
-            SubjectName = null,
-            AcademicPeriodCode = null,
-            AcademicPeriodName = null
+            TeacherName = assignment.TeacherName,
+            SubjectCode = assignment.SubjectCode,
+            SubjectName = assignment.SubjectName,
+            AcademicPeriodCode = assignment.AcademicPeriodCode,
+            AcademicPeriodName = assignment.AcademicPeriodName
         };
     }
 }

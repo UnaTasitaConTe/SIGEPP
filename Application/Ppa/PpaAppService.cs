@@ -229,7 +229,8 @@ public sealed class PpaAppService
             AcademicPeriodId = ppa.AcademicPeriodId,
             PrimaryTeacherId = ppa.PrimaryTeacherId,
             CreatedAt = ppa.CreatedAt,
-            UpdatedAt = ppa.UpdatedAt
+            UpdatedAt = ppa.UpdatedAt,
+            TeacherPrimaryName = ppa.TeacherPrimaryName,
         };
     }
 

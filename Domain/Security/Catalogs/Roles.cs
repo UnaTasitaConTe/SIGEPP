@@ -82,7 +82,11 @@ public static class Roles
             Permissions.Resources.ViewOwn,
             Permissions.Resources.Create,
             Permissions.Resources.Update,
-            Permissions.Resources.Delete
+            Permissions.Resources.Delete,
+
+            Permissions.Periods.View
+
+
         }
     );
 
@@ -104,7 +108,12 @@ public static class Roles
             Permissions.Resources.ViewAll,
 
             // Dashboard: Solo visualización básica
-            Permissions.Dashboard.View
+            Permissions.Dashboard.View,
+
+            Permissions.Periods.View,
+            
+            Permissions.Subjects.View,
+
         }
     );
 

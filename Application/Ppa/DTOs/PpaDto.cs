@@ -57,4 +57,6 @@ public sealed record PpaDto
     /// Fecha de última actualización del PPA.
     /// </summary>
     public DateTime? UpdatedAt { get; init; }
+    public string? TeacherPrimaryName { get; init; }
+
 }
