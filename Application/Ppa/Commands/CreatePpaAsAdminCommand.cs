@@ -3,9 +3,10 @@ using System.ComponentModel.DataAnnotations;
 namespace Application.Ppa.Commands;
 
 /// <summary>
-/// Comando para crear un nuevo PPA en el sistema.
+/// Comando para que un administrador cree un nuevo PPA en el sistema,
+/// especificando el docente responsable.
 /// </summary>
-public class CreatePpaCommand
+public class CreatePpaAsAdminCommand
 {
     /// <summary>
     /// Título del PPA (identificador principal del proyecto).
@@ -39,13 +40,23 @@ public class CreatePpaCommand
     public Guid AcademicPeriodId { get; set; }
 
     /// <summary>
+    /// ID del docente responsable del PPA.
+    /// </summary>
+    /// <remarks>
+    /// A diferencia del comando estándar, aquí el administrador especifica
+    /// explícitamente quién será el docente responsable del PPA.
+    /// </remarks>
+    [Required(ErrorMessage = "El ID del docente responsable es requerido.")]
+    public Guid ResponsibleTeacherId { get; set; }
+
+    /// <summary>
     /// IDs de las asignaciones docente-asignatura relacionadas con este PPA.
     /// </summary>
     /// <remarks>
     /// Las asignaciones deben:
     /// - Existir en el sistema.
     /// - Pertenecer al mismo período académico especificado.
-    /// - Pertenecer al docente autenticado (quien crea el PPA será el responsable).
+    /// - Estar activas.
     /// </remarks>
     [Required(ErrorMessage = "Debe especificar al menos una asignación docente-asignatura.")]
     [MinLength(1, ErrorMessage = "Debe especificar al menos una asignación docente-asignatura.")]
@@ -54,10 +65,5 @@ public class CreatePpaCommand
     /// <summary>
     /// Nombres de los estudiantes asociados al PPA.
     /// </summary>
-    /// <remarks>
-    /// Se aceptan nombres completos de estudiantes. No se requiere que estén
-    /// dados de alta en el sistema como usuarios. Los nombres se almacenan como
-    /// parte del PPA y quedan registrados en el historial.
-    /// </remarks>
     public IReadOnlyCollection<string> StudentNames { get; set; } = Array.Empty<string>();
 }

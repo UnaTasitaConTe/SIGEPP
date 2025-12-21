@@ -17,6 +17,16 @@ public interface ITeacherAssignmentRepository
     Task<TeacherAssignment?> GetByIdAsync(Guid id, CancellationToken ct = default);
 
     /// <summary>
+    /// Obtiene todas las asignaciones de un docente (todos los periodos).
+    /// </summary>
+    /// <param name="teacherId">ID del docente.</param>
+    /// <param name="ct">Token de cancelación.</param>
+    /// <returns>Lista de asignaciones del docente.</returns>
+    Task<IReadOnlyCollection<TeacherAssignment>> GetByTeacherAsync(
+        Guid teacherId,
+        CancellationToken ct = default);
+
+    /// <summary>
     /// Obtiene todas las asignaciones de un docente en un período académico específico.
     /// </summary>
     /// <param name="teacherId">ID del docente.</param>

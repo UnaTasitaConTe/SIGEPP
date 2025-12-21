@@ -3,6 +3,7 @@ using System;
 using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251221143239_AddPpaStudentsAndContinuity")]
+    partial class AddPpaStudentsAndContinuity
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -903,38 +906,6 @@ namespace Infrastructure.Migrations
                             Code = "dashboard.view_details",
                             Description = "Ver detalles del dashboard",
                             Module = "dashboard"
-                        },
-                        new
-                        {
-                            Id = 23L,
-                            Action = "view_all",
-                            Code = "teacherSubjects.view",
-                            Description = "Ver detalles del Gestion asignación docente-materia",
-                            Module = "teacherSubjects"
-                        },
-                        new
-                        {
-                            Id = 24L,
-                            Action = "create",
-                            Code = "teacherSubjects.create",
-                            Description = "Crear asignación docente-materia",
-                            Module = "teacherSubjects"
-                        },
-                        new
-                        {
-                            Id = 25L,
-                            Action = "update",
-                            Code = "teacherSubjects.update",
-                            Description = "Actualizar asignación docente-materia",
-                            Module = "teacherSubjects"
-                        },
-                        new
-                        {
-                            Id = 26L,
-                            Action = "deactivate",
-                            Code = "teacherSubjects.deactivate",
-                            Description = "desactivar asignación docente-materia",
-                            Module = "teacherSubjects"
                         });
                 });
 
@@ -1379,36 +1350,6 @@ namespace Infrastructure.Migrations
                         {
                             RoleId = 1L,
                             PermissionId = 20L
-                        },
-                        new
-                        {
-                            RoleId = 1L,
-                            PermissionId = 23L
-                        },
-                        new
-                        {
-                            RoleId = 1L,
-                            PermissionId = 25L
-                        },
-                        new
-                        {
-                            RoleId = 1L,
-                            PermissionId = 26L
-                        },
-                        new
-                        {
-                            RoleId = 1L,
-                            PermissionId = 24L
-                        },
-                        new
-                        {
-                            RoleId = 2L,
-                            PermissionId = 23L
-                        },
-                        new
-                        {
-                            RoleId = 3L,
-                            PermissionId = 23L
                         });
                 });
 

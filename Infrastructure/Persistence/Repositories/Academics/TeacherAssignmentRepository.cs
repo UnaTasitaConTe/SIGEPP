@@ -30,6 +30,21 @@ public class TeacherAssignmentRepository : ITeacherAssignmentRepository
         return entity == null ? null : MapToDomain(entity);
     }
 
+    public async Task<IReadOnlyCollection<TeacherAssignment>> GetByTeacherAsync(
+        Guid teacherId,
+        CancellationToken ct = default)
+    {
+        var entities = await _context.TeacherAssignments
+            .Include(x => x.Teacher)
+            .Include(x => x.AcademicPeriod)
+            .Include(x => x.Subject)
+            .Where(ta => ta.TeacherId == teacherId)
+            .OrderByDescending(ta => ta.CreatedAt)
+            .ToListAsync(ct);
+
+        return entities.Select(MapToDomain).ToList().AsReadOnly();
+    }
+
     public async Task<IReadOnlyCollection<TeacherAssignment>> GetByTeacherAndPeriodAsync(
         Guid teacherId,
         Guid academicPeriodId,

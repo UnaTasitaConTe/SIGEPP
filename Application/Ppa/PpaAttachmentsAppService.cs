@@ -1,5 +1,9 @@
 using Application.Ppa.Commands;
 using Application.Ppa.DTOs;
+using Application.Security;
+using Domain.Academics.Repositories;
+using Domain.Dictionaries;
+using Domain.Ppa;
 using Domain.Ppa.Entities;
 using Domain.Ppa.Repositories;
 using Domain.Users;
@@ -15,15 +19,24 @@ public sealed class PpaAttachmentsAppService
     private readonly IPpaAttachmentRepository _ppaAttachmentRepository;
     private readonly IPpaRepository _ppaRepository;
     private readonly IUserRepository _userRepository;
+    private readonly ICurrentUserService _currentUserService;
+    private readonly IPpaHistoryRepository _historyRepository;
+    private readonly ITeacherAssignmentRepository _teacherAssignmentRepository;
 
     public PpaAttachmentsAppService(
         IPpaAttachmentRepository ppaAttachmentRepository,
         IPpaRepository ppaRepository,
-        IUserRepository userRepository)
+        IUserRepository userRepository,
+        ICurrentUserService currentUserService,
+        IPpaHistoryRepository historyRepository,
+        ITeacherAssignmentRepository teacherAssignmentRepository)
     {
         _ppaAttachmentRepository = ppaAttachmentRepository ?? throw new ArgumentNullException(nameof(ppaAttachmentRepository));
         _ppaRepository = ppaRepository ?? throw new ArgumentNullException(nameof(ppaRepository));
         _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
+        _currentUserService = currentUserService ?? throw new ArgumentNullException(nameof(currentUserService));
+        _historyRepository = historyRepository ?? throw new ArgumentNullException(nameof(historyRepository));
+        _teacherAssignmentRepository = teacherAssignmentRepository ?? throw new ArgumentNullException(nameof(teacherAssignmentRepository));
     }
 
     /// <summary>
@@ -78,23 +91,39 @@ public sealed class PpaAttachmentsAppService
     /// <param name="command">Comando con los datos del anexo a agregar.</param>
     /// <param name="ct">Token de cancelación.</param>
     /// <returns>ID del anexo creado.</returns>
-    /// <exception cref="InvalidOperationException">Si el PPA o el usuario no existen.</exception>
+    /// <exception cref="InvalidOperationException">
+    /// Si el PPA no existe, el usuario no tiene permisos, o el usuario no existe.
+    /// </exception>
     public async Task<Guid> AddAsync(AddPpaAttachmentCommand command, CancellationToken ct = default)
     {
         if (command == null)
             throw new ArgumentNullException(nameof(command));
 
-        // 1. Validar que el PPA exista
+        // 1. Obtener usuario autenticado
+        var currentUser = _currentUserService.GetCurrentUser();
+        if (currentUser == null)
+            throw new InvalidOperationException("No se pudo obtener el usuario autenticado.");
+
+        var currentUserId = currentUser.UserId;
+
+        // 2. Validar que el PPA exista
         var ppa = await _ppaRepository.GetByIdAsync(command.PpaId, ct);
         if (ppa == null)
             throw new InvalidOperationException($"PPA con ID '{command.PpaId}' no encontrado.");
 
-        // 2. Validar que el usuario exista
+        // 3. Validar permisos: ADMIN, responsable, o docente con asignaciones en el PPA
+        var hasPermission = await ValidateUserHasAccessToPpaAsync(currentUser, ppa, ct);
+        if (!hasPermission)
+            throw new InvalidOperationException(
+                "No tiene permisos para agregar anexos a este PPA. " +
+                "Solo el docente responsable, docentes asignados al PPA, o administradores pueden agregar anexos.");
+
+        // 4. Validar que el usuario exista
         var user = await _userRepository.GetByIdAsync(command.UploadedByUserId, ct);
         if (user == null)
             throw new InvalidOperationException($"Usuario con ID '{command.UploadedByUserId}' no encontrado.");
 
-        // 3. Crear la entidad PpaAttachment usando el método de fábrica del dominio
+        // 5. Crear la entidad PpaAttachment usando el método de fábrica del dominio
         var attachment = PpaAttachment.Create(
             ppaId: command.PpaId,
             type: command.Type,
@@ -103,8 +132,19 @@ public sealed class PpaAttachmentsAppService
             uploadedByUserId: command.UploadedByUserId,
             contentType: command.ContentType);
 
-        // 4. Guardar el anexo
+        // 6. Guardar el anexo
         await _ppaAttachmentRepository.AddAsync(attachment, ct);
+
+        // 7. Registrar historial: AttachmentAdded
+        var historyEntry = PpaHistoryEntry.Create(
+            ppaId: ppa.Id,
+            performedByUserId: currentUserId,
+            actionType:  PpaHistoryActionType.AttachmentAdded,
+            oldValue: null,
+            newValue: $"Tipo: {PpaAttachmentTypeTranslations.Spanish[attachment.Type]}, Nombre: {attachment.Name}",
+            notes: $"Archivo agregado. FileKey: {attachment.FileKey}, ContentType: {attachment.ContentType ?? "N/A"}");
+
+        await _historyRepository.AddAsync(historyEntry, ct);
 
         return attachment.Id;
     }
@@ -114,17 +154,37 @@ public sealed class PpaAttachmentsAppService
     /// </summary>
     /// <param name="attachmentId">ID del anexo a eliminar.</param>
     /// <param name="ct">Token de cancelación.</param>
-    /// <exception cref="InvalidOperationException">Si el anexo no existe.</exception>
+    /// <exception cref="InvalidOperationException">
+    /// Si el anexo no existe o el usuario no tiene permisos.
+    /// </exception>
     public async Task DeleteAsync(Guid attachmentId, CancellationToken ct = default)
     {
-        // Obtener el anexo
+        // 1. Obtener usuario autenticado
+        var currentUser = _currentUserService.GetCurrentUser();
+        if (currentUser == null)
+            throw new InvalidOperationException("No se pudo obtener el usuario autenticado.");
+
+        var currentUserId = currentUser.UserId;
+
+        // 2. Obtener el anexo
         var attachment = await _ppaAttachmentRepository.GetByIdAsync(attachmentId, ct);
         if (attachment == null)
             throw new InvalidOperationException($"Anexo con ID '{attachmentId}' no encontrado.");
 
+        // 3. Obtener el PPA
+        var ppa = await _ppaRepository.GetByIdAsync(attachment.PpaId, ct);
+        if (ppa == null)
+            throw new InvalidOperationException($"PPA con ID '{attachment.PpaId}' no encontrado.");
+
+        // 4. Validar permisos: ADMIN, responsable, o docente con asignaciones en el PPA
+        var hasPermission = await ValidateUserHasAccessToPpaAsync(currentUser, ppa, ct);
+        if (!hasPermission)
+            throw new InvalidOperationException(
+                "No tiene permisos para eliminar anexos de este PPA. " +
+                "Solo el docente responsable, docentes asignados al PPA, o administradores pueden eliminar anexos.");
+
         // TODO: Validación futura - No permitir eliminar el último PpaDocument si el PPA está Completed
-        // var ppa = await _ppaRepository.GetByIdAsync(attachment.PpaId, ct);
-        // if (ppa != null && ppa.Status == PpaStatus.Completed && attachment.Type == PpaAttachmentType.PpaDocument)
+        // if (ppa.Status == PpaStatus.Completed && attachment.Type == PpaAttachmentType.PpaDocument)
         // {
         //     var documentCount = await _ppaAttachmentRepository.CountByTypeAsync(
         //         attachment.PpaId, PpaAttachmentType.PpaDocument, includeDeleted: false, ct);
@@ -133,11 +193,58 @@ public sealed class PpaAttachmentsAppService
         //             "No se puede eliminar el último documento formal (PpaDocument) de un PPA Completed.");
         // }
 
-        // Marcar como eliminado
+        // 5. Marcar como eliminado
         attachment.MarkAsDeleted(DateTime.UtcNow);
 
-        // Guardar cambios
+        // 6. Guardar cambios
         await _ppaAttachmentRepository.UpdateAsync(attachment, ct);
+
+        // 7. Registrar historial: AttachmentRemoved
+        var historyEntry = PpaHistoryEntry.Create(
+            ppaId: ppa.Id,
+            performedByUserId: currentUserId,
+            actionType: PpaHistoryActionType.AttachmentRemoved,
+            oldValue: $"Tipo: {PpaAttachmentTypeTranslations.Spanish[attachment.Type]}, Nombre: {attachment.Name}",
+            newValue: null,
+            notes: $"Archivo eliminado. FileKey: {attachment.FileKey}");
+
+        await _historyRepository.AddAsync(historyEntry, ct);
+    }
+
+    /// <summary>
+    /// Valida si un usuario tiene acceso a un PPA para realizar operaciones.
+    /// </summary>
+    /// <param name="currentUser">Usuario autenticado.</param>
+    /// <param name="ppa">PPA a validar.</param>
+    /// <param name="ct">Token de cancelación.</param>
+    /// <returns>True si el usuario tiene acceso, false en caso contrario.</returns>
+    /// <remarks>
+    /// Un usuario tiene acceso si:
+    /// - Es ADMIN, o
+    /// - Es el docente responsable del PPA, o
+    /// - Tiene asignaciones docente-asignatura asociadas al PPA.
+    /// </remarks>
+    private async Task<bool> ValidateUserHasAccessToPpaAsync(
+        CurrentUser currentUser,
+        Domain.Ppa.Entities.Ppa ppa,
+        CancellationToken ct)
+    {
+        // ADMIN tiene acceso total
+        if (currentUser.Roles.Contains("ADMIN"))
+            return true;
+
+        // Docente responsable tiene acceso
+        if (ppa.ResponsibleTeacherId == currentUser.UserId)
+            return true;
+
+        // Verificar si el docente tiene asignaciones en este PPA
+        var teacherAssignments = await _teacherAssignmentRepository.GetByTeacherAsync(currentUser.UserId, ct);
+
+        // Verificar si alguna de las asignaciones del docente está en el PPA
+        var hasAssignment = ppa.TeacherAssignmentIds.Any(assignmentId =>
+            teacherAssignments.Any(ta => ta.Id == assignmentId));
+
+        return hasAssignment;
     }
 
     /// <summary>

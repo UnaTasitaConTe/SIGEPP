@@ -16,6 +16,8 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 
 // Infrastructure services (DbContext, Repositories, Security)
+builder.Services.AddHttpContextAccessor();
+
 builder.Services.AddInfrastructure(builder.Configuration, builder.Environment);
 
 // Application services

@@ -25,8 +25,8 @@ public static class Roles
         name: "Administrador",
         description: "Acceso completo a gestión académica (períodos, materias, asignaciones), supervisión de PPAs y dashboard completo.",
         isSystemRole: true,
-        permissions: new[]
-        {
+        permissions:
+        [
             // Gestión Académica: Períodos (CRUD completo)
             Permissions.Periods.View,
             Permissions.Periods.Create,
@@ -41,6 +41,10 @@ public static class Roles
 
             // Gestión Académica: Asignación Docente-Materia
             Permissions.TeacherSubjects.Manage,
+            Permissions.TeacherSubjects.View,
+            Permissions.TeacherSubjects.Create,
+            Permissions.TeacherSubjects.Update,
+            Permissions.TeacherSubjects.Deactivate,
 
             // PPA: Supervisión y control
             Permissions.PPA.ViewAll,
@@ -54,7 +58,7 @@ public static class Roles
             // Dashboard: Acceso completo
             Permissions.Dashboard.View,
             Permissions.Dashboard.ViewDetails
-        }
+        ]
     );
 
     // ========================================
@@ -66,8 +70,8 @@ public static class Roles
         name: "Docente",
         description: "Gestiona sus propios PPAs y recursos académicos, visualiza materias asignadas.",
         isSystemRole: true,
-        permissions: new[]
-        {
+        permissions:
+        [
             // Gestión Académica: Solo visualizar materias
             Permissions.Subjects.View,
 
@@ -84,10 +88,11 @@ public static class Roles
             Permissions.Resources.Update,
             Permissions.Resources.Delete,
 
-            Permissions.Periods.View
+            Permissions.Periods.View,
+            Permissions.TeacherSubjects.View,
 
 
-        }
+        ]
     );
 
     // ========================================
@@ -99,8 +104,8 @@ public static class Roles
         name: "Consulta Interna",
         description: "Acceso de solo lectura para consulta y auditoría de PPAs, recursos y dashboard.",
         isSystemRole: true,
-        permissions: new[]
-        {
+        permissions:
+        [
             // PPA: Solo visualización completa
             Permissions.PPA.ViewAll,
 
@@ -111,21 +116,22 @@ public static class Roles
             Permissions.Dashboard.View,
 
             Permissions.Periods.View,
-            
-            Permissions.Subjects.View,
 
-        }
+            Permissions.Subjects.View,
+            Permissions.TeacherSubjects.View,
+
+        ]
     );
 
     // ========================================
     // Colección de todos los roles predefinidos
     // ========================================
-    public static IReadOnlyList<Role> All => new[]
-    {
+    public static IReadOnlyList<Role> All =>
+    [
         Admin,
         Docente,
         ConsultaInterna
-    };
+    ];
 
     /// <summary>
     /// Obtiene un rol por su ID

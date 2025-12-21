@@ -4,9 +4,10 @@ using Application.Ppa.DTOs;
 namespace Application.Ppa.Commands;
 
 /// <summary>
-/// Comando para actualizar los datos de un PPA existente.
+/// Comando para que un administrador actualice un PPA existente,
+/// con la capacidad de cambiar el docente responsable.
 /// </summary>
-public class UpdatePpaCommand
+public class UpdatePpaAsAdminCommand
 {
     /// <summary>
     /// ID del PPA a actualizar.
@@ -40,35 +41,26 @@ public class UpdatePpaCommand
     public string? SpecificObjectives { get; set; }
 
     /// <summary>
-    /// Nuevo ID del docente responsable del PPA (opcional).
-    /// Si se proporciona, se cambiará el responsable del PPA.
+    /// ID del docente responsable del PPA.
     /// </summary>
     /// <remarks>
-    /// Solo puede ser cambiado por administradores o el docente responsable actual.
-    /// No se puede cambiar si el PPA está en estado Completed o Archived.
+    /// El administrador puede cambiar el docente responsable del PPA.
     /// </remarks>
-    public Guid? NewResponsibleTeacherId { get; set; }
+    [Required(ErrorMessage = "El ID del docente responsable es requerido.")]
+    public Guid ResponsibleTeacherId { get; set; }
 
     /// <summary>
-    /// Nuevos IDs de asignaciones docente-asignatura (opcional).
-    /// Si se proporciona, reemplazará las asignaciones actuales.
+    /// Nuevos IDs de asignaciones docente-asignatura.
     /// </summary>
-    /// <remarks>
-    /// Las asignaciones deben pertenecer al mismo período académico del PPA.
-    /// No se puede cambiar si el PPA está en estado Completed o Archived.
-    /// </remarks>
-    public IReadOnlyCollection<Guid>? NewTeacherAssignmentIds { get; set; }
+    [Required(ErrorMessage = "Debe especificar al menos una asignación docente-asignatura.")]
+    [MinLength(1, ErrorMessage = "Debe especificar al menos una asignación docente-asignatura.")]
+    public IReadOnlyCollection<Guid> TeacherAssignmentIds { get; set; } = Array.Empty<Guid>();
 
     /// <summary>
-    /// Lista de estudiantes a sincronizar (opcional).
+    /// Lista de estudiantes a sincronizar.
     /// Los estudiantes con Id existente se actualizarán.
     /// Los estudiantes sin Id (null o Guid.Empty) se crearán.
     /// Los estudiantes existentes que no aparezcan en esta lista se eliminarán.
-    /// Si se proporciona, se sincronizará la lista completa de estudiantes del PPA.
     /// </summary>
-    /// <remarks>
-    /// Los cambios en estudiantes quedan registrados en el historial del PPA.
-    /// No se puede cambiar si el PPA está en estado Completed o Archived.
-    /// </remarks>
-    public IReadOnlyCollection<UpdatePpaStudentItem>? NewStudents { get; set; }
+    public IReadOnlyCollection<UpdatePpaStudentItem> Students { get; set; } = Array.Empty<UpdatePpaStudentItem>();
 }

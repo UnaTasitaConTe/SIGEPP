@@ -12,7 +12,6 @@ namespace SIGEPP.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Policy = "TeacherSubjects.Manage")]
 public class TeacherAssignmentsController : ControllerBase
 {
     private readonly TeacherAssignmentsAppService _teacherAssignmentsAppService;
@@ -37,6 +36,7 @@ public class TeacherAssignmentsController : ControllerBase
     /// <response code="400">Parámetros inválidos.</response>
     /// <response code="401">No autenticado.</response>
     [HttpGet("by-teacher")]
+    [Authorize(Policy = "TeacherSubjects.View")]
     [ProducesResponseType(typeof(IReadOnlyCollection<TeacherAssignmentDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -88,6 +88,7 @@ public class TeacherAssignmentsController : ControllerBase
     /// <response code="400">Parámetros inválidos.</response>
     /// <response code="401">No autenticado.</response>
     [HttpGet("by-subject")]
+    [Authorize(Policy = "TeacherSubjects.View")]
     [ProducesResponseType(typeof(IReadOnlyCollection<TeacherAssignmentDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -138,6 +139,7 @@ public class TeacherAssignmentsController : ControllerBase
     /// <response code="400">Parámetros inválidos.</response>
     /// <response code="401">No autenticado.</response>
     [HttpGet("by-period")]
+    [Authorize(Policy = "TeacherSubjects.View")]
     [ProducesResponseType(typeof(IReadOnlyCollection<TeacherAssignmentDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -183,6 +185,7 @@ public class TeacherAssignmentsController : ControllerBase
     /// <response code="404">Docente, asignatura o período académico no encontrado.</response>
     /// <response code="401">No autenticado.</response>
     [HttpPost]
+    [Authorize(Policy = "TeacherSubjects.Manage")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -250,6 +253,7 @@ public class TeacherAssignmentsController : ControllerBase
     /// <response code="404">Asignación no encontrada.</response>
     /// <response code="401">No autenticado.</response>
     [HttpPost("{id:guid}/deactivate")]
+    [Authorize(Policy = "TeacherSubjects.Manage")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -289,6 +293,7 @@ public class TeacherAssignmentsController : ControllerBase
     /// <response code="404">Asignación no encontrada.</response>
     /// <response code="401">No autenticado.</response>
     [HttpPost("{id:guid}/activate")]
+    [Authorize(Policy = "TeacherSubjects.Manage")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -328,6 +333,7 @@ public class TeacherAssignmentsController : ControllerBase
     /// <response code="404">Asignación no encontrada.</response>
     /// <response code="401">No autenticado.</response>
     [HttpDelete("{id:guid}")]
+    [Authorize(Policy = "TeacherSubjects.Manage")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]

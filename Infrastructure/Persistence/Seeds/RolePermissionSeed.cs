@@ -33,6 +33,11 @@ public static class RolePermissionSeed
     private const long ResourcesDelete = 20;
     private const long DashboardView = 21;
     private const long DashboardViewDetails = 22;
+    private const long TeacherSubjectsView = 23;
+    private const long TeacherSubjectsCreate = 24;
+    private const long TeacherSubjectsUpdate = 25;
+    private const long TeacherSubjectsDeactive = 26;
+
 
     // Constantes para IDs de roles (deben coincidir con RoleSeed)
     private const long AdminRoleId = 1;
@@ -116,6 +121,16 @@ public static class RolePermissionSeed
         rolePermissions.Add(new RolePermissionEntity { RoleId = AdminRoleId, PermissionId = ResourcesCreate });
         rolePermissions.Add(new RolePermissionEntity { RoleId = AdminRoleId, PermissionId = ResourcesUpdate });
         rolePermissions.Add(new RolePermissionEntity { RoleId = AdminRoleId, PermissionId = ResourcesDelete });
+
+
+        //nuevos
+        rolePermissions.Add(new RolePermissionEntity { RoleId = AdminRoleId, PermissionId = TeacherSubjectsView });
+        rolePermissions.Add(new RolePermissionEntity { RoleId = AdminRoleId, PermissionId = TeacherSubjectsUpdate });
+        rolePermissions.Add(new RolePermissionEntity { RoleId = AdminRoleId, PermissionId = TeacherSubjectsDeactive });
+        rolePermissions.Add(new RolePermissionEntity { RoleId = AdminRoleId, PermissionId = TeacherSubjectsCreate });
+
+        rolePermissions.Add(new RolePermissionEntity { RoleId = DocenteRoleId, PermissionId = TeacherSubjectsView });
+        rolePermissions.Add(new RolePermissionEntity { RoleId = ConsultaInternaRoleId, PermissionId = TeacherSubjectsView });
 
 
         modelBuilder.Entity<RolePermissionEntity>().HasData(rolePermissions);

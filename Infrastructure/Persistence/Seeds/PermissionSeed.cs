@@ -231,6 +231,42 @@ public static class PermissionSeed
             Description = "Ver detalles del dashboard"
         });
 
+        permissions.Add(new PermissionEntity
+        {
+            Id = id++,
+            Code = "teacherSubjects.view",
+            Module = "teacherSubjects",
+            Action = "view_all",
+            Description = "Ver detalles del Gestion asignación docente-materia"
+        });
+
+        permissions.Add(new PermissionEntity
+        {
+            Id = id++,
+            Code = "teacherSubjects.create",
+            Module = "teacherSubjects",
+            Action = "create",
+            Description = "Crear asignación docente-materia"
+        });
+
+        permissions.Add(new PermissionEntity
+        {
+            Id = id++,
+            Code = "teacherSubjects.update",
+            Module = "teacherSubjects",
+            Action = "update",
+            Description = "Actualizar asignación docente-materia"
+        });
+
+        permissions.Add(new PermissionEntity
+        {
+            Id = id++,
+            Code = "teacherSubjects.deactivate",
+            Module = "teacherSubjects",
+            Action = "deactivate",
+            Description = "desactivar asignación docente-materia"
+        });
+
         modelBuilder.Entity<PermissionEntity>().HasData(permissions);
     }
 }

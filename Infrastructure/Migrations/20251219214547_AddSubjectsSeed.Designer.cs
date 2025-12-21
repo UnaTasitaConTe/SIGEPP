@@ -3,6 +3,7 @@ using System;
 using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251219214547_AddSubjectsSeed")]
+    partial class AddSubjectsSeed
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -21,53 +24,6 @@ namespace Infrastructure.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
-
-            modelBuilder.Entity("Domain.Ppa.Entities.PpaHistoryEntry", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<int>("ActionType")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("NewValue")
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)");
-
-                    b.Property<string>("Notes")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<string>("OldValue")
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)");
-
-                    b.Property<DateTime>("PerformedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("PerformedByUserId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("PpaId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("PerformedAt")
-                        .HasDatabaseName("IX_PpaHistoryEntries_PerformedAt");
-
-                    b.HasIndex("PerformedByUserId")
-                        .HasDatabaseName("IX_PpaHistoryEntries_PerformedByUserId");
-
-                    b.HasIndex("PpaId")
-                        .HasDatabaseName("IX_PpaHistoryEntries_PpaId");
-
-                    b.HasIndex("PpaId", "ActionType")
-                        .HasDatabaseName("IX_PpaHistoryEntries_PpaId_ActionType");
-
-                    b.ToTable("PpaHistoryEntries", (string)null);
-                });
 
             modelBuilder.Entity("Infrastructure.Persistence.Entities.Academics.AcademicPeriodEntity", b =>
                 {
@@ -903,38 +859,6 @@ namespace Infrastructure.Migrations
                             Code = "dashboard.view_details",
                             Description = "Ver detalles del dashboard",
                             Module = "dashboard"
-                        },
-                        new
-                        {
-                            Id = 23L,
-                            Action = "view_all",
-                            Code = "teacherSubjects.view",
-                            Description = "Ver detalles del Gestion asignación docente-materia",
-                            Module = "teacherSubjects"
-                        },
-                        new
-                        {
-                            Id = 24L,
-                            Action = "create",
-                            Code = "teacherSubjects.create",
-                            Description = "Crear asignación docente-materia",
-                            Module = "teacherSubjects"
-                        },
-                        new
-                        {
-                            Id = 25L,
-                            Action = "update",
-                            Code = "teacherSubjects.update",
-                            Description = "Actualizar asignación docente-materia",
-                            Module = "teacherSubjects"
-                        },
-                        new
-                        {
-                            Id = 26L,
-                            Action = "deactivate",
-                            Code = "teacherSubjects.deactivate",
-                            Description = "desactivar asignación docente-materia",
-                            Module = "teacherSubjects"
                         });
                 });
 
@@ -1011,12 +935,6 @@ namespace Infrastructure.Migrations
                     b.Property<Guid>("AcademicPeriodId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid?>("ContinuationOfPpaId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("ContinuedByPpaId")
-                        .HasColumnType("uuid");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -1051,12 +969,6 @@ namespace Infrastructure.Migrations
                     b.HasIndex("AcademicPeriodId")
                         .HasDatabaseName("IX_Ppas_AcademicPeriodId");
 
-                    b.HasIndex("ContinuationOfPpaId")
-                        .HasDatabaseName("IX_Ppas_ContinuationOfPpaId");
-
-                    b.HasIndex("ContinuedByPpaId")
-                        .HasDatabaseName("IX_Ppas_ContinuedByPpaId");
-
                     b.HasIndex("PrimaryTeacherId")
                         .HasDatabaseName("IX_Ppas_PrimaryTeacherId");
 
@@ -1067,28 +979,6 @@ namespace Infrastructure.Migrations
                         .HasDatabaseName("IX_Ppas_Teacher_Period");
 
                     b.ToTable("Ppas", (string)null);
-                });
-
-            modelBuilder.Entity("Infrastructure.Persistence.Entities.Ppa.PpaStudentEntity", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<Guid>("PpaId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("PpaId")
-                        .HasDatabaseName("IX_PpaStudents_PpaId");
-
-                    b.ToTable("PpaStudents", (string)null);
                 });
 
             modelBuilder.Entity("Infrastructure.Persistence.Entities.Ppa.PpaTeacherAssignmentEntity", b =>
@@ -1379,36 +1269,6 @@ namespace Infrastructure.Migrations
                         {
                             RoleId = 1L,
                             PermissionId = 20L
-                        },
-                        new
-                        {
-                            RoleId = 1L,
-                            PermissionId = 23L
-                        },
-                        new
-                        {
-                            RoleId = 1L,
-                            PermissionId = 25L
-                        },
-                        new
-                        {
-                            RoleId = 1L,
-                            PermissionId = 26L
-                        },
-                        new
-                        {
-                            RoleId = 1L,
-                            PermissionId = 24L
-                        },
-                        new
-                        {
-                            RoleId = 2L,
-                            PermissionId = 23L
-                        },
-                        new
-                        {
-                            RoleId = 3L,
-                            PermissionId = 23L
                         });
                 });
 
@@ -1557,17 +1417,6 @@ namespace Infrastructure.Migrations
                     b.Navigation("PrimaryTeacher");
                 });
 
-            modelBuilder.Entity("Infrastructure.Persistence.Entities.Ppa.PpaStudentEntity", b =>
-                {
-                    b.HasOne("Infrastructure.Persistence.Entities.Ppa.PpaEntity", "Ppa")
-                        .WithMany("Students")
-                        .HasForeignKey("PpaId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Ppa");
-                });
-
             modelBuilder.Entity("Infrastructure.Persistence.Entities.Ppa.PpaTeacherAssignmentEntity", b =>
                 {
                     b.HasOne("Infrastructure.Persistence.Entities.Ppa.PpaEntity", "Ppa")
@@ -1645,8 +1494,6 @@ namespace Infrastructure.Migrations
                     b.Navigation("Attachments");
 
                     b.Navigation("PpaTeacherAssignments");
-
-                    b.Navigation("Students");
                 });
 
             modelBuilder.Entity("Infrastructure.Persistence.Entities.RoleEntity", b =>

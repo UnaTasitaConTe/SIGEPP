@@ -1,6 +1,7 @@
 using Application.Ppa;
 using Application.Ppa.Commands;
 using Application.Ppa.DTOs;
+using Application.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -15,13 +16,16 @@ namespace SIGEPP.Controllers;
 public class PpaController : ControllerBase
 {
     private readonly PpaAppService _ppaAppService;
+    private readonly ICurrentUserService _currentUserService;
     private readonly ILogger<PpaController> _logger;
 
     public PpaController(
         PpaAppService ppaAppService,
+        ICurrentUserService currentUserService,
         ILogger<PpaController> logger)
     {
         _ppaAppService = ppaAppService ?? throw new ArgumentNullException(nameof(ppaAppService));
+        _currentUserService = currentUserService ?? throw new ArgumentNullException(nameof(currentUserService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -167,6 +171,73 @@ public class PpaController : ControllerBase
     }
 
     /// <summary>
+    /// Crea un nuevo PPA como administrador, especificando el docente responsable.
+    /// </summary>
+    /// <param name="command">Datos del PPA a crear (incluye docente responsable).</param>
+    /// <param name="ct">Token de cancelación.</param>
+    /// <returns>ID del PPA creado.</returns>
+    /// <response code="201">PPA creado exitosamente.</response>
+    /// <response code="400">Datos inválidos, período no activo, asignaciones inválidas, o PPA duplicado.</response>
+    /// <response code="404">Período académico, docente responsable o asignaciones no encontrados.</response>
+    /// <response code="401">No autenticado.</response>
+    /// <response code="403">No tiene permisos (requiere rol ADMIN).</response>
+    [HttpPost("admin")]
+    [Authorize(Policy = "Ppa.Create")]
+    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> CreateAsAdmin(
+        [FromBody] CreatePpaAsAdminCommand command,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var ppaId = await _ppaAppService.CreateAsAdminAsync(command, ct);
+
+            _logger.LogInformation(
+                "PPA creado exitosamente por admin. PpaId: {PpaId}, Título: {Title}, Responsable: {ResponsibleTeacherId}",
+                ppaId,
+                command.Title,
+                command.ResponsibleTeacherId);
+
+            return CreatedAtAction(
+                nameof(GetById),
+                new { id = ppaId },
+                new { id = ppaId, message = "PPA creado exitosamente." });
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(
+                "Error al crear PPA como admin. Título: {Title}, Responsable: {ResponsibleTeacherId}. Razón: {Reason}",
+                command.Title,
+                command.ResponsibleTeacherId,
+                ex.Message);
+
+            if (ex.Message.Contains("no existe") || ex.Message.Contains("no encontrado"))
+                return NotFound(new { message = ex.Message });
+
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Error inesperado al crear PPA como admin. Título: {Title}, Responsable: {ResponsibleTeacherId}",
+                command.Title,
+                command.ResponsibleTeacherId);
+
+            return StatusCode(
+                StatusCodes.Status500InternalServerError,
+                new { message = "Error al crear el PPA." });
+        }
+    }
+
+    /// <summary>
     /// Crea un nuevo PPA en el sistema.
     /// </summary>
     /// <param name="command">Datos del PPA a crear.</param>
@@ -196,11 +267,10 @@ public class PpaController : ControllerBase
             var ppaId = await _ppaAppService.CreateAsync(command, ct);
 
             _logger.LogInformation(
-                "PPA creado exitosamente. PpaId: {PpaId}, Título: {Title}, PeriodId: {PeriodId}, TeacherId: {TeacherId}",
+                "PPA creado exitosamente. PpaId: {PpaId}, Título: {Title}, PeriodId: {PeriodId}",
                 ppaId,
                 command.Title,
-                command.AcademicPeriodId,
-                command.PrimaryTeacherId);
+                command.AcademicPeriodId);
 
             return CreatedAtAction(
                 nameof(GetById),
@@ -232,6 +302,64 @@ public class PpaController : ControllerBase
             return StatusCode(
                 StatusCodes.Status500InternalServerError,
                 new { message = "Error al crear el PPA." });
+        }
+    }
+
+    /// <summary>
+    /// Actualiza un PPA como administrador, permitiendo cambiar el docente responsable.
+    /// </summary>
+    /// <param name="id">ID del PPA a actualizar.</param>
+    /// <param name="command">Nuevos datos del PPA (incluye docente responsable).</param>
+    /// <param name="ct">Token de cancelación.</param>
+    /// <returns>Confirmación de actualización.</returns>
+    /// <response code="200">PPA actualizado exitosamente.</response>
+    /// <response code="400">Datos inválidos.</response>
+    /// <response code="404">PPA no encontrado.</response>
+    /// <response code="409">El ID del PPA no coincide con el ID de la ruta.</response>
+    /// <response code="401">No autenticado.</response>
+    /// <response code="403">No tiene permisos (requiere rol ADMIN).</response>
+    [HttpPut("admin/{id:guid}")]
+    [Authorize(Policy = "Ppa.Update")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> UpdateAsAdmin(
+        Guid id,
+        [FromBody] UpdatePpaAsAdminCommand command,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            if (command.Id != id)
+                return Conflict(new { message = "El ID del PPA no coincide con el ID de la ruta." });
+
+            await _ppaAppService.UpdateAsAdminAsync(command, ct);
+
+            _logger.LogInformation("PPA {PpaId} actualizado exitosamente por admin", id);
+
+            return Ok(new { message = "PPA actualizado exitosamente." });
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning("Error al actualizar PPA {PpaId} como admin. Razón: {Reason}", id, ex.Message);
+
+            if (ex.Message.Contains("no encontrado"))
+                return NotFound(new { message = ex.Message });
+
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error inesperado al actualizar PPA {PpaId} como admin", id);
+            return StatusCode(
+                StatusCodes.Status500InternalServerError,
+                new { message = "Error al actualizar el PPA." });
         }
     }
 
@@ -365,6 +493,175 @@ public class PpaController : ControllerBase
             return StatusCode(
                 StatusCodes.Status500InternalServerError,
                 new { message = "Error al cambiar el estado del PPA." });
+        }
+    }
+
+    /// <summary>
+    /// Obtiene todos los PPAs del docente autenticado (como responsable o asignado).
+    /// </summary>
+    /// <param name="academicPeriodId">ID del período académico (opcional).</param>
+    /// <param name="ct">Token de cancelación.</param>
+    /// <returns>Lista de PPAs del docente autenticado.</returns>
+    /// <response code="200">Lista de PPAs obtenida exitosamente.</response>
+    /// <response code="400">Parámetros inválidos.</response>
+    /// <response code="401">No autenticado.</response>
+    [HttpGet("my")]
+    [Authorize(Policy = "Ppa.View")]
+    [ProducesResponseType(typeof(IReadOnlyCollection<PpaSummaryDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> GetMyPpas(
+        [FromQuery] Guid? academicPeriodId = null,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            var currentUserId = _currentUserService.GetCurrentUserId();
+
+            var ppas = await _ppaAppService.GetPpasForTeacherAsync(currentUserId, academicPeriodId, ct);
+
+            _logger.LogInformation(
+                "Se obtuvieron {Count} PPAs para el docente autenticado {TeacherId}",
+                ppas.Count,
+                currentUserId);
+
+            return Ok(ppas);
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning("Error al obtener PPAs del docente autenticado. Razón: {Reason}", ex.Message);
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error inesperado al obtener PPAs del docente autenticado");
+            return StatusCode(
+                StatusCodes.Status500InternalServerError,
+                new { message = "Error al obtener los PPAs del docente." });
+        }
+    }
+
+    /// <summary>
+    /// Obtiene el historial de cambios de un PPA específico.
+    /// </summary>
+    /// <param name="id">ID del PPA.</param>
+    /// <param name="ct">Token de cancelación.</param>
+    /// <returns>Lista de entradas de historial del PPA.</returns>
+    /// <response code="200">Historial obtenido exitosamente.</response>
+    /// <response code="404">PPA no encontrado.</response>
+    /// <response code="401">No autenticado.</response>
+    [HttpGet("{id:guid}/history")]
+    [Authorize(Policy = "Ppa.View")]
+    [ProducesResponseType(typeof(IReadOnlyCollection<PpaHistoryDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> GetHistory(
+        Guid id,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            var history = await _ppaAppService.GetHistoryAsync(id, ct);
+
+            _logger.LogInformation(
+                "Se obtuvo historial de {Count} entradas para el PPA {PpaId}",
+                history.Count,
+                id);
+
+            return Ok(history);
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning("Error al obtener historial del PPA {PpaId}. Razón: {Reason}", id, ex.Message);
+
+            if (ex.Message.Contains("no encontrado"))
+                return NotFound(new { message = ex.Message });
+
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error inesperado al obtener historial del PPA {PpaId}", id);
+            return StatusCode(
+                StatusCodes.Status500InternalServerError,
+                new { message = "Error al obtener el historial del PPA." });
+        }
+    }
+
+    /// <summary>
+    /// Continúa un PPA existente a otro período académico.
+    /// </summary>
+    /// <param name="id">ID del PPA a continuar.</param>
+    /// <param name="command">Datos para la continuación del PPA.</param>
+    /// <param name="ct">Token de cancelación.</param>
+    /// <returns>ID del nuevo PPA creado como continuación.</returns>
+    /// <response code="201">PPA continuado exitosamente.</response>
+    /// <response code="400">Datos inválidos, PPA ya continuado, o período destino inválido.</response>
+    /// <response code="404">PPA origen o período académico no encontrado.</response>
+    /// <response code="409">El ID del PPA no coincide con el ID de la ruta.</response>
+    /// <response code="401">No autenticado.</response>
+    /// <response code="403">No tiene permisos (requiere ser responsable del PPA o ADMIN).</response>
+    [HttpPost("{id:guid}/continue")]
+    [Authorize(Policy = "Ppa.Create")]
+    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> ContinuePpa(
+        Guid id,
+        [FromBody] ContinuePpaCommand command,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            if (command.SourcePpaId != id)
+                return Conflict(new { message = "El ID del PPA no coincide con el ID de la ruta." });
+
+            var newPpaId = await _ppaAppService.ContinuePpaAsync(command, ct);
+
+            _logger.LogInformation(
+                "PPA {SourcePpaId} continuado exitosamente. Nuevo PPA: {NewPpaId}, Período destino: {TargetPeriodId}",
+                id,
+                newPpaId,
+                command.TargetAcademicPeriodId);
+
+            return CreatedAtAction(
+                nameof(GetById),
+                new { id = newPpaId },
+                new { id = newPpaId, message = "PPA continuado exitosamente." });
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(
+                "Error al continuar PPA {SourcePpaId} al período {TargetPeriodId}. Razón: {Reason}",
+                id,
+                command.TargetAcademicPeriodId,
+                ex.Message);
+
+            if (ex.Message.Contains("no encontrado") || ex.Message.Contains("no existe"))
+                return NotFound(new { message = ex.Message });
+
+            if (ex.Message.Contains("No tiene permisos"))
+                return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
+
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Error inesperado al continuar PPA {SourcePpaId} al período {TargetPeriodId}",
+                id,
+                command.TargetAcademicPeriodId);
+
+            return StatusCode(
+                StatusCodes.Status500InternalServerError,
+                new { message = "Error al continuar el PPA." });
         }
     }
 }

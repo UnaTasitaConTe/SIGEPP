@@ -120,6 +120,17 @@ public static class AuthorizationExtensions
             options.AddPolicy("TeacherSubjects.Manage", policy =>
                 policy.Requirements.Add(new PermissionRequirement("teacherSubjects.manage")));
 
+            options.AddPolicy("TeacherSubjects.View", policy =>
+                policy.Requirements.Add(new PermissionRequirement("teacherSubjects.view_all")));
+
+            options.AddPolicy("TeacherSubjects.Create", policy =>
+                policy.Requirements.Add(new PermissionRequirement("teacherSubjects.create")));
+
+            options.AddPolicy("TeacherSubjects.Update", policy =>
+                policy.Requirements.Add(new PermissionRequirement("teacherSubjects.update")));
+
+            options.AddPolicy("TeacherSubjects.Deactivate", policy =>
+                policy.Requirements.Add(new PermissionRequirement("teacherSubjects.deactivate")));
             // ============================================
             // MÓDULO: PPA (Proyectos Académicos)
             // ============================================

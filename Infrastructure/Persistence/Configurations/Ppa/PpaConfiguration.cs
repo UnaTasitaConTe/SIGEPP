@@ -78,5 +78,18 @@ public class PpaConfiguration : IEntityTypeConfiguration<PpaEntity>
             .WithOne(a => a.Ppa)
             .HasForeignKey(a => a.PpaId)
             .OnDelete(DeleteBehavior.Cascade); // Si se elimina el PPA, eliminar sus anexos
+
+        // Configuración de continuidad
+        builder.Property(p => p.ContinuationOfPpaId)
+            .IsRequired(false);
+
+        builder.Property(p => p.ContinuedByPpaId)
+            .IsRequired(false);
+
+        builder.HasIndex(p => p.ContinuationOfPpaId)
+            .HasDatabaseName("IX_Ppas_ContinuationOfPpaId");
+
+        builder.HasIndex(p => p.ContinuedByPpaId)
+            .HasDatabaseName("IX_Ppas_ContinuedByPpaId");
     }
 }

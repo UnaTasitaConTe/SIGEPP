@@ -78,4 +78,21 @@ public class PpaEntity
     /// Relación many-to-many con asignaciones docente-asignatura a través de tabla intermedia.
     /// </summary>
     public ICollection<PpaTeacherAssignmentEntity> PpaTeacherAssignments { get; set; } = new List<PpaTeacherAssignmentEntity>();
+
+    /// <summary>
+    /// Estudiantes asociados al PPA.
+    /// </summary>
+    public ICollection<PpaStudentEntity> Students { get; set; } = new List<PpaStudentEntity>();
+
+    /// <summary>
+    /// ID del PPA original del cual este PPA es una continuación.
+    /// Null si este PPA no es una continuación de otro.
+    /// </summary>
+    public Guid? ContinuationOfPpaId { get; set; }
+
+    /// <summary>
+    /// ID del PPA que continúa este PPA en otro periodo académico.
+    /// Null si este PPA no ha sido continuado aún.
+    /// </summary>
+    public Guid? ContinuedByPpaId { get; set; }
 }

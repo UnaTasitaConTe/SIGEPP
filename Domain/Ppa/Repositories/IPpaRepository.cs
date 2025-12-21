@@ -87,6 +87,26 @@ public interface IPpaRepository
         CancellationToken ct = default);
 
     /// <summary>
+    /// Verifica si existe un PPA con un título específico en un período académico.
+    /// Este método es equivalente a <see cref="TitleExistsInPeriodAsync"/> y se proporciona
+    /// para mantener compatibilidad con la nueva nomenclatura.
+    /// </summary>
+    /// <param name="title">Título del PPA.</param>
+    /// <param name="academicPeriodId">ID del período académico.</param>
+    /// <param name="excludePpaId">ID del PPA a excluir de la búsqueda (para actualizaciones).</param>
+    /// <param name="ct">Token de cancelación.</param>
+    /// <returns>True si existe un PPA con ese título en el período.</returns>
+    /// <remarks>
+    /// Este método valida la regla de negocio: no deben existir PPAs con el mismo nombre
+    /// en el mismo periodo académico. Se utiliza antes de crear o actualizar un PPA.
+    /// </remarks>
+    Task<bool> ExistsWithTitleAsync(
+        string title,
+        Guid academicPeriodId,
+        Guid? excludePpaId = null,
+        CancellationToken ct = default);
+
+    /// <summary>
     /// Agrega un nuevo PPA al repositorio.
     /// </summary>
     /// <param name="ppa">PPA a agregar.</param>
@@ -99,4 +119,54 @@ public interface IPpaRepository
     /// <param name="ppa">PPA con los datos actualizados.</param>
     /// <param name="ct">Token de cancelación.</param>
     Task UpdateAsync(Entities.Ppa ppa, CancellationToken ct = default);
+
+    /// <summary>
+    /// Actualiza solo la información básica del PPA (título, objetivos, descripción, estado, etc.).
+    /// Realiza su propia lectura de la entidad PpaEntity y SaveChanges independiente.
+    /// </summary>
+    /// <param name="ppaId">ID del PPA a actualizar.</param>
+    /// <param name="title">Nuevo título.</param>
+    /// <param name="generalObjective">Nuevo objetivo general.</param>
+    /// <param name="specificObjectives">Nuevos objetivos específicos.</param>
+    /// <param name="description">Nueva descripción.</param>
+    /// <param name="status">Nuevo estado.</param>
+    /// <param name="primaryTeacherId">Nuevo docente principal.</param>
+    /// <param name="continuationOfPpaId">ID del PPA del que es continuación.</param>
+    /// <param name="continuedByPpaId">ID del PPA que continúa este.</param>
+    /// <param name="ct">Token de cancelación.</param>
+    Task UpdateBasicInfoAsync(
+        Guid ppaId,
+        string title,
+        string? generalObjective,
+        string? specificObjectives,
+        string? description,
+        PpaStatus status,
+        Guid primaryTeacherId,
+        Guid? continuationOfPpaId,
+        Guid? continuedByPpaId,
+        CancellationToken ct = default);
+
+    /// <summary>
+    /// Actualiza solo las asignaciones docente-asignatura del PPA.
+    /// Realiza su propia lectura de PpaTeacherAssignmentEntity y SaveChanges independiente.
+    /// </summary>
+    /// <param name="ppaId">ID del PPA a actualizar.</param>
+    /// <param name="teacherAssignmentIds">Nueva lista de IDs de asignaciones docente-asignatura.</param>
+    /// <param name="ct">Token de cancelación.</param>
+    Task UpdateTeacherAssignmentsAsync(
+        Guid ppaId,
+        IEnumerable<Guid> teacherAssignmentIds,
+        CancellationToken ct = default);
+
+    /// <summary>
+    /// Actualiza solo los estudiantes del PPA.
+    /// Realiza su propia lectura de PpaStudentEntity y SaveChanges independiente.
+    /// </summary>
+    /// <param name="ppaId">ID del PPA a actualizar.</param>
+    /// <param name="students">Nueva lista de estudiantes con sus IDs y nombres.</param>
+    /// <param name="ct">Token de cancelación.</param>
+    Task UpdateStudentsAsync(
+        Guid ppaId,
+        IEnumerable<(Guid? Id, string Name)> students,
+        CancellationToken ct = default);
 }

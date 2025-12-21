@@ -63,6 +63,17 @@ public sealed record PpaDetailDto
     public required IReadOnlyCollection<Guid> TeacherAssignmentIds { get; init; }
 
     /// <summary>
+    /// Detalles de las asignaciones docente-asignatura relacionadas con este PPA,
+    /// incluyendo nombres de asignaturas y docentes.
+    /// </summary>
+    public IReadOnlyCollection<PpaTeacherAssignmentDetailDto>? AssignmentDetails { get; init; }
+
+    /// <summary>
+    /// Estudiantes asociados al PPA con sus IDs y nombres.
+    /// </summary>
+    public IReadOnlyCollection<PpaStudentDto>? Students { get; init; }
+
+    /// <summary>
     /// Fecha de creación del PPA.
     /// </summary>
     public required DateTime CreatedAt { get; init; }

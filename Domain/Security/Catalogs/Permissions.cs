@@ -35,10 +35,10 @@ public static class Permissions
         public static readonly Permission Update = Permission.Create("subjects.update");
         public static readonly Permission Deactivate = Permission.Create("subjects.deactivate");
 
-        public static IReadOnlyList<Permission> All => new[]
-        {
+        public static IReadOnlyList<Permission> All =>
+        [
             View, Create, Update, Deactivate
-        };
+        ];
     }
 
     // ========================================
@@ -47,11 +47,16 @@ public static class Permissions
     public static class TeacherSubjects
     {
         public static readonly Permission Manage = Permission.Create("teacherSubjects.manage");
-
-        public static IReadOnlyList<Permission> All => new[]
-        {
-            Manage
-        };
+        public static readonly Permission View = Permission.Create("teacherSubjects.view");
+        public static readonly Permission Create = Permission.Create("teacherSubjects.create");
+        public static readonly Permission Update = Permission.Create("teacherSubjects.update");
+        public static readonly Permission Deactivate = Permission.Create("teacherSubjects.deactivate");
+        public static IReadOnlyList<Permission> All =>
+        [
+            Manage,
+            View,
+            Create, Update,Deactivate
+        ];
     }
 
     // ========================================
@@ -66,10 +71,10 @@ public static class Permissions
         public static readonly Permission ChangeStatus = Permission.Create("ppa.change_status");
         public static readonly Permission UploadFile = Permission.Create("ppa.upload_file");
 
-        public static IReadOnlyList<Permission> All => new[]
-        {
+        public static IReadOnlyList<Permission> All =>
+        [
             ViewAll, ViewOwn, Create, Update, ChangeStatus, UploadFile
-        };
+        ];
     }
 
     // ========================================
@@ -83,10 +88,10 @@ public static class Permissions
         public static readonly Permission Update = Permission.Create("resources.update");
         public static readonly Permission Delete = Permission.Create("resources.delete");
 
-        public static IReadOnlyList<Permission> All => new[]
-        {
+        public static IReadOnlyList<Permission> All =>
+        [
             ViewAll, ViewOwn, Create, Update, Delete
-        };
+        ];
     }
 
     // ========================================
@@ -97,10 +102,10 @@ public static class Permissions
         public static readonly Permission View = Permission.Create("dashboard.view");
         public static readonly Permission ViewDetails = Permission.Create("dashboard.view_details");
 
-        public static IReadOnlyList<Permission> All => new[]
-        {
+        public static IReadOnlyList<Permission> All =>
+        [
             View, ViewDetails
-        };
+        ];
     }
 
     // ========================================
@@ -134,7 +139,7 @@ public static class Permissions
             "ppa" => PPA.All,
             "resources" => Resources.All,
             "dashboard" => Dashboard.All,
-            _ => Array.Empty<Permission>()
+            _ => []
         };
     }
 }

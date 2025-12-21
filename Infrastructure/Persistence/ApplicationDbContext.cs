@@ -38,6 +38,8 @@ public class ApplicationDbContext : DbContext
     public DbSet<PpaEntity> Ppas => Set<PpaEntity>();
     public DbSet<PpaAttachmentEntity> PpaAttachments => Set<PpaAttachmentEntity>();
     public DbSet<PpaTeacherAssignmentEntity> PpaTeacherAssignments => Set<PpaTeacherAssignmentEntity>();
+    public DbSet<PpaStudentEntity> PpaStudents => Set<PpaStudentEntity>();
+    public DbSet<Domain.Ppa.Entities.PpaHistoryEntry> PpaHistoryEntries => Set<Domain.Ppa.Entities.PpaHistoryEntry>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -61,6 +63,8 @@ public class ApplicationDbContext : DbContext
         modelBuilder.ApplyConfiguration(new PpaConfiguration());
         modelBuilder.ApplyConfiguration(new PpaAttachmentConfiguration());
         modelBuilder.ApplyConfiguration(new PpaTeacherAssignmentConfiguration());
+        modelBuilder.ApplyConfiguration(new PpaStudentConfiguration());
+        modelBuilder.ApplyConfiguration(new PpaHistoryEntryConfiguration());
 
         // Aplicar seeds
         SecuritySeed.Seed(modelBuilder);

@@ -115,6 +115,7 @@ public static class DependencyInjection
         // Repositorios de PPA
         services.AddScoped<IPpaRepository, PpaRepository>();
         services.AddScoped<IPpaAttachmentRepository, PpaAttachmentRepository>();
+        services.AddScoped<IPpaHistoryRepository, PpaHistoryRepository>();
 
         return services;
     }
@@ -147,6 +148,9 @@ public static class DependencyInjection
         // Registrar servicios de seguridad
         services.AddSingleton<IPasswordHasher, PasswordHasher>();
         services.AddSingleton<IJwtTokenGenerator, JwtTokenGenerator>();
+
+        // Registrar IHttpContextAccessor (necesario para CurrentUserService)
+        services.AddScoped<ICurrentUserService, CurrentUserService>();
 
         return services;
     }
