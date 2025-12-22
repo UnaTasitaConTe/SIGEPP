@@ -101,6 +101,20 @@ public sealed class PpaRepository : IPpaRepository
         return entities.Select(MapToDomain).ToList().AsReadOnly();
     }
 
+    public async Task<IReadOnlyCollection<Domain.Ppa.Entities.Ppa>> GetByContinuationOfAsync(
+        Guid continuationOfPpaId,
+        CancellationToken ct = default)
+    {
+        var entities = await _context.Ppas
+            .Include(p => p.PpaTeacherAssignments)
+            .Include(p => p.Students)
+            .Where(p => p.ContinuationOfPpaId == continuationOfPpaId)
+            .OrderByDescending(p => p.CreatedAt)
+            .ToListAsync(ct);
+
+        return entities.Select(MapToDomain).ToList().AsReadOnly();
+    }
+
     public async Task<bool> ExistsActiveForAssignmentsAsync(
         IEnumerable<Guid> teacherAssignmentIds,
         CancellationToken ct = default)

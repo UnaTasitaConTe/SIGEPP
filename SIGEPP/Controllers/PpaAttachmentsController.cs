@@ -1,6 +1,7 @@
 using Application.Ppa;
 using Application.Ppa.Commands;
 using Application.Ppa.DTOs;
+using Application.Storage;
 using Domain.Ppa;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -17,13 +18,16 @@ namespace SIGEPP.Controllers;
 public class PpaAttachmentsController : ControllerBase
 {
     private readonly PpaAttachmentsAppService _ppaAttachmentsAppService;
+    private readonly IFileStorageService _fileStorageService;
     private readonly ILogger<PpaAttachmentsController> _logger;
 
     public PpaAttachmentsController(
         PpaAttachmentsAppService ppaAttachmentsAppService,
+        IFileStorageService fileStorageService,
         ILogger<PpaAttachmentsController> logger)
     {
         _ppaAttachmentsAppService = ppaAttachmentsAppService ?? throw new ArgumentNullException(nameof(ppaAttachmentsAppService));
+        _fileStorageService = fileStorageService ?? throw new ArgumentNullException(nameof(fileStorageService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -275,6 +279,131 @@ public class PpaAttachmentsController : ControllerBase
                 StatusCodes.Status500InternalServerError,
                 new { message = "Error al eliminar el anexo." });
         }
+    }
+
+    /// <summary>
+    /// Descarga un anexo de PPA.
+    /// Valida que el anexo exista y no esté eliminado antes de descargarlo.
+    /// </summary>
+    /// <param name="attachmentId">ID del anexo a descargar.</param>
+    /// <param name="ct">Token de cancelación.</param>
+    /// <returns>Stream del archivo con el tipo de contenido apropiado.</returns>
+    /// <response code="200">Archivo descargado exitosamente.</response>
+    /// <response code="404">Anexo no encontrado o eliminado.</response>
+    /// <response code="401">No autenticado.</response>
+    /// <response code="500">Error al descargar el archivo.</response>
+    /// <remarks>
+    /// Este endpoint descarga un archivo de anexo de PPA.
+    /// Valida que el anexo exista en la base de datos y no esté marcado como eliminado
+    /// antes de descargar el archivo desde el almacenamiento físico (MinIO).
+    /// </remarks>
+    [HttpGet("download/{attachmentId:guid}")]
+    [Authorize(Policy = "Resources.View")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> DownloadAttachment(
+        Guid attachmentId,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            // Obtener el anexo para validar que existe y obtener el fileKey
+            var attachment = await _ppaAttachmentsAppService.GetByIdAsync(attachmentId, ct);
+
+            _logger.LogInformation(
+                "Iniciando descarga de anexo. AttachmentId: {AttachmentId}, FileKey: {FileKey}, Name: {Name}",
+                attachmentId,
+                attachment.FileKey,
+                attachment.Name);
+
+            // Obtener el archivo del almacenamiento
+            var stream = await _fileStorageService.GetAsync(attachment.FileKey, ct);
+
+            // Determinar el content type
+            var contentType = !string.IsNullOrWhiteSpace(attachment.ContentType)
+                ? attachment.ContentType
+                : GetContentType(attachment.Name);
+
+            // Sanitizar el nombre del archivo para evitar problemas
+            var fileName = SanitizeFileName(attachment.Name);
+
+            _logger.LogInformation(
+                "Anexo descargado exitosamente. AttachmentId: {AttachmentId}, FileName: {FileName}, ContentType: {ContentType}",
+                attachmentId,
+                fileName,
+                contentType);
+
+            // Retornar el archivo como respuesta
+            return File(stream, contentType, fileName, enableRangeProcessing: true);
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "Anexo no encontrado o eliminado. AttachmentId: {AttachmentId}",
+                attachmentId);
+
+            return NotFound(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Error inesperado al descargar anexo. AttachmentId: {AttachmentId}",
+                attachmentId);
+
+            return StatusCode(
+                StatusCodes.Status500InternalServerError,
+                new { message = "Error al descargar el anexo." });
+        }
+    }
+
+    /// <summary>
+    /// Determina el content type basado en la extensión del archivo.
+    /// </summary>
+    private static string GetContentType(string fileName)
+    {
+        var extension = Path.GetExtension(fileName).ToLowerInvariant();
+
+        return extension switch
+        {
+            ".pdf" => "application/pdf",
+            ".doc" => "application/msword",
+            ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            ".xls" => "application/vnd.ms-excel",
+            ".xlsx" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            ".ppt" => "application/vnd.ms-powerpoint",
+            ".pptx" => "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+            ".zip" => "application/zip",
+            ".rar" => "application/x-rar-compressed",
+            ".7z" => "application/x-7z-compressed",
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".png" => "image/png",
+            ".gif" => "image/gif",
+            ".bmp" => "image/bmp",
+            ".txt" => "text/plain",
+            ".csv" => "text/csv",
+            ".json" => "application/json",
+            ".xml" => "application/xml",
+            _ => "application/octet-stream"
+        };
+    }
+
+    /// <summary>
+    /// Sanitiza el nombre del archivo para evitar problemas en la descarga.
+    /// </summary>
+    private static string SanitizeFileName(string fileName)
+    {
+        if (string.IsNullOrWhiteSpace(fileName))
+            return "archivo";
+
+        // Eliminar caracteres no válidos en nombres de archivo
+        var invalidChars = Path.GetInvalidFileNameChars();
+        var sanitized = string.Join("_", fileName.Split(invalidChars, StringSplitOptions.RemoveEmptyEntries));
+
+        return string.IsNullOrWhiteSpace(sanitized) ? "archivo" : sanitized;
     }
 }
 

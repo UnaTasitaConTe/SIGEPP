@@ -28,4 +28,12 @@ public interface IFileStorageService
     /// <param name="fileKey">Clave del archivo a eliminar.</param>
     /// <param name="ct">Token de cancelación.</param>
     Task DeleteAsync(string fileKey, CancellationToken ct = default);
+
+    /// <summary>
+    /// Obtiene un archivo del almacenamiento como Stream para descargarlo.
+    /// </summary>
+    /// <param name="fileKey">Clave del archivo a obtener.</param>
+    /// <param name="ct">Token de cancelación.</param>
+    /// <returns>Stream con el contenido del archivo.</returns>
+    Task<Stream> GetAsync(string fileKey, CancellationToken ct = default);
 }

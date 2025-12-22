@@ -126,6 +126,53 @@ public sealed class MinioFileStorageService : IFileStorageService
     }
 
     /// <summary>
+    /// Obtiene un archivo de MinIO y retorna un Stream para su descarga.
+    /// </summary>
+    public async Task<Stream> GetAsync(string fileKey, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(fileKey))
+            throw new ArgumentException("El fileKey es requerido.", nameof(fileKey));
+
+        try
+        {
+            await EnsureBucketExistsAsync(ct).ConfigureAwait(false);
+
+            var memoryStream = new MemoryStream();
+
+            var getObjectArgs = new GetObjectArgs()
+                .WithBucket(_options.BucketName)
+                .WithObject(fileKey)
+                .WithCallbackStream(stream =>
+                {
+                    stream.CopyTo(memoryStream);
+                });
+
+            await _minioClient.GetObjectAsync(getObjectArgs, ct).ConfigureAwait(false);
+
+            // Resetear la posición del stream para que pueda leerse desde el inicio
+            memoryStream.Position = 0;
+
+            _logger.LogInformation(
+                "Archivo obtenido de MinIO. Bucket: {Bucket}, ObjectName: {ObjectName}, Size: {Size}",
+                _options.BucketName,
+                fileKey,
+                memoryStream.Length);
+
+            return memoryStream;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Error al obtener archivo de MinIO. Bucket: {Bucket}, ObjectName: {ObjectName}",
+                _options.BucketName,
+                fileKey);
+
+            throw new InvalidOperationException("Error al obtener el archivo del almacenamiento.", ex);
+        }
+    }
+
+    /// <summary>
     /// Asegura que el bucket configurado exista en MinIO.
     /// Si no existe, lo crea automáticamente.
     /// </summary>

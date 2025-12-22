@@ -9,7 +9,8 @@ namespace Domain.Dictionaries
             { PpaStatus.Proposal, "Propuesta" },
             { PpaStatus.InProgress, "En Progreso" },
             { PpaStatus.Completed, "Completado" },
-            { PpaStatus.Archived, "Archivado" }
+            { PpaStatus.Archived, "Archivado" },
+            {PpaStatus.InContinuing, "En continuación" }
         };
 
         public static readonly Dictionary<PpaStatus, string> English = new()
@@ -17,7 +18,9 @@ namespace Domain.Dictionaries
             { PpaStatus.Proposal, "Proposal" },
             { PpaStatus.InProgress, "In Progress" },
             { PpaStatus.Completed, "Completed" },
-            { PpaStatus.Archived, "Archived" }
+            { PpaStatus.Archived, "Archived" },
+            {PpaStatus.InContinuing, "In continuing" }
+
         };
     }
 }

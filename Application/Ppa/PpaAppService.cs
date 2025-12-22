@@ -8,6 +8,7 @@ using Domain.Ppa.Entities;
 using Domain.Ppa.Repositories;
 using Domain.Users;
 using System.Text.Json;
+using static Domain.Security.Catalogs.Permissions;
 
 namespace Application.Ppa;
 
@@ -23,6 +24,7 @@ public sealed class PpaAppService
     private readonly IUserRepository _userRepository;
     private readonly ICurrentUserService _currentUserService;
     private readonly IPpaHistoryRepository _historyRepository;
+    private readonly IPpaAttachmentRepository _ppaAttachmentRepository;
 
     public PpaAppService(
         IPpaRepository ppaRepository,
@@ -30,7 +32,8 @@ public sealed class PpaAppService
         ITeacherAssignmentRepository teacherAssignmentRepository,
         IUserRepository userRepository,
         ICurrentUserService currentUserService,
-        IPpaHistoryRepository historyRepository)
+        IPpaHistoryRepository historyRepository,
+        IPpaAttachmentRepository ppaAttachmentRepository)
     {
         _ppaRepository = ppaRepository ?? throw new ArgumentNullException(nameof(ppaRepository));
         _periodRepository = periodRepository ?? throw new ArgumentNullException(nameof(periodRepository));
@@ -38,6 +41,7 @@ public sealed class PpaAppService
         _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
         _currentUserService = currentUserService ?? throw new ArgumentNullException(nameof(currentUserService));
         _historyRepository = historyRepository ?? throw new ArgumentNullException(nameof(historyRepository));
+        _ppaAttachmentRepository = ppaAttachmentRepository;
     }
 
     /// <summary>
@@ -907,7 +911,7 @@ public sealed class PpaAppService
             {
                 // Si se proporciona una lista vacía, eliminar todos los estudiantes existentes
                 var currentStudents = ppa.Students.ToList();
-                if (currentStudents.Any())
+                if (currentStudents.Count != 0)
                 {
                     var oldStudentsStr = string.Join(", ", currentStudents.Select(s => s.Name));
 
@@ -950,27 +954,26 @@ public sealed class PpaAppService
             throw new ArgumentNullException(nameof(command));
 
         // Obtener el PPA
-        var ppa = await _ppaRepository.GetByIdAsync(command.Id, ct);
-        if (ppa == null)
-            throw new InvalidOperationException($"PPA con ID '{command.Id}' no encontrado.");
+        var ppa = await _ppaRepository.GetByIdAsync(command.Id, ct) ?? throw new InvalidOperationException($"PPA con ID '{command.Id}' no encontrado.");
 
         var statusOld = PpaStatusTranslations.Spanish[ppa.Status];
         var newSatus = PpaStatusTranslations.Spanish[command.NewStatus];
 
+        if(PpaStatus.Completed == ppa.Status)
+            throw new InvalidOperationException("No se cambia el estado de un ppa completado.");
+
         var currentUser = _currentUserService.GetCurrentUser();
         if (currentUser == null)
             throw new InvalidOperationException("No se pudo obtener el usuario autenticado.");
-        // TODO: Validación futura - Cuando NewStatus == PpaStatus.Completed, validar que exista
-        // al menos un anexo de tipo PpaAttachmentType.PpaDocument.
-        // Esto se implementará cuando se integre PpaAttachmentsAppService.
-        //if (command.NewStatus == PpaStatus.Completed)
-        //{
-        //    var documentCount = await _ppaAttachmentRepository.CountByTypeAsync(
-        //        command.Id, PpaAttachmentType.PpaDocument, includeDeleted: false, ct);
-        //    if (documentCount == 0)
-        //        throw new InvalidOperationException(
-        //            "No se puede marcar el PPA como Completed sin al menos un documento formal (tipo PpaDocument).");
-        //}
+
+        if (command.NewStatus == PpaStatus.Completed)
+        {
+            var documentCount = await _ppaAttachmentRepository.CountByTypeAsync(
+                command.Id, PpaAttachmentType.PpaDocument, includeDeleted: false, ct);
+            if (documentCount == 0)
+                throw new InvalidOperationException(
+                    "No se puede marcar el PPA como Completo sin al menos un documento formal (tipo PpaDocument).");
+        }
 
         // Cambiar el estado usando método del dominio
         ppa.ChangeStatus(command.NewStatus);
@@ -996,11 +999,72 @@ public sealed class PpaAppService
                  newValue: newSatus,
                  notes: $"Cambio de estado de {statusOld} - {newSatus} "));
 
+        // Si el PPA cambia a estado Completed, completar recursivamente todos los PPAs que son continuación de este
+        if (command.NewStatus == PpaStatus.Completed)
+        {
+            await CompleteContinuationPpasRecursivelyAsync(ppa.Id, currentUser.UserId, historyEntries, ct);
+        }
+
         if (historyEntries.Any())
         {
             await _historyRepository.AddRangeAsync(historyEntries, ct);
         }
 
+    }
+
+    /// <summary>
+    /// Completa recursivamente todos los PPAs que son continuación del PPA especificado.
+    /// </summary>
+    /// <param name="ppaId">ID del PPA completado.</param>
+    /// <param name="performedByUserId">ID del usuario que realizó el cambio.</param>
+    /// <param name="historyEntries">Lista de entradas de historial a actualizar.</param>
+    /// <param name="ct">Token de cancelación.</param>
+    private async Task CompleteContinuationPpasRecursivelyAsync(
+        Guid ppaId,
+        Guid performedByUserId,
+        List<PpaHistoryEntry> historyEntries,
+        CancellationToken ct)
+    {
+        // Obtener todos los PPAs que son continuación de este PPA
+        var continuationPpas = await _ppaRepository.GetByContinuationOfAsync(ppaId, ct);
+
+        foreach (var continuationPpa in continuationPpas)
+        {
+            // Solo completar si no está ya completado o archivado
+            if (continuationPpa.Status != PpaStatus.Completed )
+            {
+                var oldStatus = PpaStatusTranslations.Spanish[continuationPpa.Status];
+                var newStatus = PpaStatusTranslations.Spanish[PpaStatus.Completed];
+
+                // Cambiar el estado a Completed
+                continuationPpa.ChangeStatus(PpaStatus.Completed);
+
+                // Guardar cambios
+                await _ppaRepository.UpdateBasicInfoAsync(
+                    ppaId: continuationPpa.Id,
+                    title: continuationPpa.Title,
+                    generalObjective: continuationPpa.GeneralObjective,
+                    specificObjectives: continuationPpa.SpecificObjectives,
+                    description: continuationPpa.Description,
+                    status: continuationPpa.Status,
+                    primaryTeacherId: continuationPpa.PrimaryTeacherId,
+                    continuationOfPpaId: continuationPpa.ContinuationOfPpaId,
+                    continuedByPpaId: continuationPpa.ContinuedByPpaId,
+                    ct);
+
+                // Registrar en historial
+                historyEntries.Add(PpaHistoryEntry.Create(
+                    ppaId: continuationPpa.Id,
+                    performedByUserId: performedByUserId,
+                    actionType: PpaHistoryActionType.ChangedStatus,
+                    oldValue: oldStatus,
+                    newValue: newStatus,
+                    notes: $"Completado automáticamente en cascada debido a que el PPA origen (ID: {ppaId}) fue completado."));
+
+                // Completar recursivamente los PPAs que son continuación de este
+                await CompleteContinuationPpasRecursivelyAsync(continuationPpa.Id, performedByUserId, historyEntries, ct);
+            }
+        }
     }
 
     /// <summary>
@@ -1153,7 +1217,7 @@ public sealed class PpaAppService
             generalObjective: sourcePpa.GeneralObjective,
             specificObjectives: sourcePpa.SpecificObjectives,
             description: sourcePpa.Description,
-            status: sourcePpa.Status,
+            status: PpaStatus.InContinuing,
             primaryTeacherId: sourcePpa.PrimaryTeacherId,
             continuationOfPpaId: sourcePpa.ContinuationOfPpaId,
             continuedByPpaId: sourcePpa.ContinuedByPpaId,
@@ -1164,7 +1228,7 @@ public sealed class PpaAppService
 
         // 21. Historial en PPA origen: ContinuationCreated
         var sourceStudentsStr = string.Join(", ", sourcePpa.Students.Select(s => s.Name));
-        var newStudentsStr = command.StudentNames.Any()
+        var newStudentsStr = command.StudentNames.Count != 0
             ? string.Join(", ", command.StudentNames)
             : "Sin estudiantes";
 
@@ -1185,6 +1249,14 @@ public sealed class PpaAppService
             newValue: $"Título: {newTitle}, Período: {targetPeriod.Code}",
             notes: $"PPA creado como continuación del PPA '{sourcePpa.Title}' (ID: {sourcePpa.Id}) del periodo '{sourcePeriod.Code}'. " +
                    $"Asignaciones: {command.TeacherAssignmentIds.Count}, Estudiantes: {command.StudentNames.Count}"));
+
+        historyEntries.Add(PpaHistoryEntry.Create(
+         ppaId: sourcePpa.Id,
+         performedByUserId: currentUser.UserId,
+         actionType: PpaHistoryActionType.ChangedStatus,
+         oldValue: PpaStatusTranslations.Spanish[sourcePpa.Status],
+         newValue: PpaStatusTranslations.Spanish[PpaStatus.InContinuing],
+         notes: $"Cambio de estado de {PpaStatusTranslations.Spanish[sourcePpa.Status]} - {PpaStatusTranslations.Spanish[PpaStatus.InContinuing]} "));
 
         // 23. Si cambió la lista de estudiantes, registrar historial adicional
         var sourceStudentsList = sourcePpa.Students.Select(s => s.Name).OrderBy(x => x).ToList();
@@ -1254,7 +1326,11 @@ public sealed class PpaAppService
             AssignmentDetails = assignmentDetails,
             Students = students,
             CreatedAt = ppa.CreatedAt,
-            UpdatedAt = ppa.UpdatedAt
+            UpdatedAt = ppa.UpdatedAt,
+            HasContinuation = ppa.ContinuedByPpaId.HasValue,
+            IsContinuation = ppa.ContinuationOfPpaId.HasValue,
+            ContinuationOfPpaId = ppa.ContinuationOfPpaId,
+            ContinuedByPpaId = ppa.ContinuedByPpaId,
         };
     }
 

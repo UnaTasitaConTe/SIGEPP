@@ -59,6 +59,16 @@ public interface IPpaRepository
         CancellationToken ct = default);
 
     /// <summary>
+    /// Obtiene todos los PPAs que son continuación de un PPA específico.
+    /// </summary>
+    /// <param name="continuationOfPpaId">ID del PPA del cual son continuación.</param>
+    /// <param name="ct">Token de cancelación.</param>
+    /// <returns>Colección de PPAs que son continuación del PPA especificado.</returns>
+    Task<IReadOnlyCollection<Entities.Ppa>> GetByContinuationOfAsync(
+        Guid continuationOfPpaId,
+        CancellationToken ct = default);
+
+    /// <summary>
     /// Verifica si existe un PPA activo (no Archived) para un conjunto de asignaciones docente-asignatura.
     /// </summary>
     /// <param name="teacherAssignmentIds">IDs de las asignaciones docente-asignatura.</param>

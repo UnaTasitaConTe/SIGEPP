@@ -84,6 +84,28 @@ public sealed class PpaAttachmentsAppService
     }
 
     /// <summary>
+    /// Obtiene un anexo específico por su ID.
+    /// </summary>
+    /// <param name="attachmentId">ID del anexo.</param>
+    /// <param name="ct">Token de cancelación.</param>
+    /// <returns>DTO del anexo.</returns>
+    /// <exception cref="InvalidOperationException">Si el anexo no existe o está eliminado.</exception>
+    public async Task<PpaAttachmentDto> GetByIdAsync(
+        Guid attachmentId,
+        CancellationToken ct = default)
+    {
+        var attachment = await _ppaAttachmentRepository.GetByIdAsync(attachmentId, ct);
+
+        if (attachment == null)
+            throw new InvalidOperationException($"Anexo con ID '{attachmentId}' no encontrado.");
+
+        if (attachment.IsDeleted)
+            throw new InvalidOperationException($"Anexo con ID '{attachmentId}' ha sido eliminado.");
+
+        return ToDto(attachment);
+    }
+
+    /// <summary>
     /// Agrega un nuevo anexo a un PPA.
     /// NOTA: Este método solo maneja la metadata del anexo.
     /// La subida física del archivo al almacenamiento se debe manejar en otra capa/servicio.

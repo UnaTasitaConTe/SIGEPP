@@ -24,5 +24,10 @@ public enum PpaStatus
     /// Archivado. El PPA ha sido archivado y ya no está en gestión activa.
     /// Este es un estado terminal del que no se puede salir.
     /// </summary>
-    Archived = 3
+    Archived = 3,
+    /// <summary>
+    /// En continuación. El PPA ha sido Continuado.
+    /// Este es un estado terminal del que no se puede salir.
+    /// </summary>
+    InContinuing = 4,
 }

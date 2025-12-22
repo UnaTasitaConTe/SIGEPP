@@ -143,6 +143,147 @@ public sealed class FileStorageController : ControllerBase
                 new { message = "Error inesperado al subir el archivo." });
         }
     }
+
+    /// <summary>
+    /// Descarga un archivo del almacenamiento usando su fileKey.
+    /// </summary>
+    /// <param name="fileKey">Clave del archivo a descargar.</param>
+    /// <param name="ct">Token de cancelación.</param>
+    /// <returns>Stream del archivo con el tipo de contenido apropiado.</returns>
+    /// <response code="200">Archivo descargado exitosamente.</response>
+    /// <response code="400">FileKey inválido o vacío.</response>
+    /// <response code="401">No autenticado.</response>
+    /// <response code="404">Archivo no encontrado en el almacenamiento.</response>
+    /// <response code="500">Error al obtener el archivo.</response>
+    /// <remarks>
+    /// Este endpoint descarga el archivo físico desde MinIO usando el fileKey.
+    /// El fileKey es la clave generada al subir el archivo.
+    ///
+    /// Ejemplo de uso:
+    /// GET /api/FileStorage/download/{fileKey}
+    ///
+    /// IMPORTANTE: Este endpoint descarga directamente sin validar permisos sobre el recurso.
+    /// Para descargas de anexos de PPA con validación, usar el endpoint específico de PpaAttachments.
+    /// </remarks>
+    [HttpGet("download/{fileKey}")]
+    [Authorize]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> Download(
+        string fileKey,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(fileKey))
+                return BadRequest(new { message = "El fileKey es requerido." });
+
+            _logger.LogInformation(
+                "Iniciando descarga de archivo. FileKey: {FileKey}",
+                fileKey);
+
+            // Obtener el archivo del almacenamiento
+            var stream = await _fileStorageService.GetAsync(fileKey, ct);
+
+            // Extraer el nombre del archivo del fileKey (formato: folder/guid_nombrearchivo)
+            var fileName = ExtractFileNameFromFileKey(fileKey);
+
+            // Intentar determinar el content type basado en la extensión
+            var contentType = GetContentType(fileName);
+
+            _logger.LogInformation(
+                "Archivo descargado exitosamente. FileKey: {FileKey}, FileName: {FileName}, ContentType: {ContentType}",
+                fileKey,
+                fileName,
+                contentType);
+
+            // Retornar el archivo como respuesta
+            return File(stream, contentType, fileName, enableRangeProcessing: true);
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "Archivo no encontrado o error al descargar. FileKey: {FileKey}",
+                fileKey);
+
+            return NotFound(new { message = "Archivo no encontrado en el almacenamiento." });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Error inesperado al descargar archivo. FileKey: {FileKey}",
+                fileKey);
+
+            return StatusCode(
+                StatusCodes.Status500InternalServerError,
+                new { message = "Error al descargar el archivo." });
+        }
+    }
+
+    /// <summary>
+    /// Extrae el nombre del archivo del fileKey.
+    /// El fileKey tiene formato: folder/guid_nombrearchivo
+    /// </summary>
+    private static string ExtractFileNameFromFileKey(string fileKey)
+    {
+        try
+        {
+            // Obtener la última parte después de '/'
+            var lastSlashIndex = fileKey.LastIndexOf('/');
+            var fileNamePart = lastSlashIndex >= 0
+                ? fileKey.Substring(lastSlashIndex + 1)
+                : fileKey;
+
+            // Eliminar el GUID del inicio (formato: guid_nombrearchivo)
+            var underscoreIndex = fileNamePart.IndexOf('_');
+            if (underscoreIndex >= 0 && underscoreIndex < fileNamePart.Length - 1)
+            {
+                return fileNamePart.Substring(underscoreIndex + 1);
+            }
+
+            return fileNamePart;
+        }
+        catch
+        {
+            return "archivo"; // fallback
+        }
+    }
+
+    /// <summary>
+    /// Determina el content type basado en la extensión del archivo.
+    /// </summary>
+    private static string GetContentType(string fileName)
+    {
+        var extension = Path.GetExtension(fileName).ToLowerInvariant();
+
+        return extension switch
+        {
+            ".pdf" => "application/pdf",
+            ".doc" => "application/msword",
+            ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            ".xls" => "application/vnd.ms-excel",
+            ".xlsx" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            ".ppt" => "application/vnd.ms-powerpoint",
+            ".pptx" => "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+            ".zip" => "application/zip",
+            ".rar" => "application/x-rar-compressed",
+            ".7z" => "application/x-7z-compressed",
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".png" => "image/png",
+            ".gif" => "image/gif",
+            ".bmp" => "image/bmp",
+            ".txt" => "text/plain",
+            ".csv" => "text/csv",
+            ".json" => "application/json",
+            ".xml" => "application/xml",
+            _ => "application/octet-stream"
+        };
+    }
 }
 
 /// <summary>

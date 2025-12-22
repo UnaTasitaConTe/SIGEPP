@@ -82,4 +82,8 @@ public sealed record PpaDetailDto
     /// Fecha de última actualización del PPA.
     /// </summary>
     public DateTime? UpdatedAt { get; init; }
+    public bool IsContinuation { get; init; }
+    public bool HasContinuation { get; init; }
+    public Guid? ContinuedByPpaId { get; init; }
+    public Guid? ContinuationOfPpaId { get; init; }
 }
