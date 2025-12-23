@@ -63,15 +63,26 @@ builder.Services.AddAuthentication(options =>
 // Configurar autorización basada en permisos
 builder.Services.AddSigeppAuthorizationPolicies();
 
+var corsOrigins = builder.Configuration
+    .GetSection("Cors:AllowedOrigins")
+    .Get<string[]>() ?? [];
+
+var allowCredentials = builder.Configuration.GetValue("Cors:AllowCredentials", true);
 // Configurar CORS para permitir peticiones desde el frontend
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
-        policy.WithOrigins("http://localhost:3000", "http://localhost:5173") // Ajustar según el puerto del frontend
-              .AllowAnyHeader()
-              .AllowAnyMethod()
-              .AllowCredentials();
+        if (corsOrigins.Length > 0)
+            policy.WithOrigins(corsOrigins);
+
+        policy.AllowAnyHeader()
+            .AllowAnyMethod();
+
+        if (allowCredentials)
+            policy.AllowCredentials();
+        else
+            policy.DisallowCredentials();
     });
 });
 
