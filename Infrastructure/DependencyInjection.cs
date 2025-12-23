@@ -171,8 +171,11 @@ public static class DependencyInjection
             var options = sp.GetRequiredService<IOptions<MinioOptions>>().Value;
 
             var clientBuilder = new MinioClient()
-                .WithEndpoint(options.Endpoint, options.Port)
+                .WithEndpoint(options.Endpoint)
                 .WithCredentials(options.AccessKey, options.SecretKey);
+
+            if (options.Port.HasValue)
+                clientBuilder = clientBuilder.WithEndpoint(options.Endpoint, options.Port.Value);
 
             if (options.UseSsl)
             {

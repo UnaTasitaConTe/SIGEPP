@@ -21,7 +21,7 @@ public sealed class MinioOptions
     /// Puerto del servidor MinIO.
     /// Ejemplo: 9000.
     /// </summary>
-    public int Port { get; init; }
+    public int? Port { get; init; }
 
     /// <summary>
     /// Indica si se debe usar SSL/TLS.
