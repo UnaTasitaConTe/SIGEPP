@@ -1,4 +1,5 @@
 using System.Reflection;
+using Domain.Common;
 using Domain.Security.Entities;
 using Domain.Security.ValueObjects;
 using Domain.Users;
@@ -195,6 +196,70 @@ public class UserRepository : IUserRepository
             .ToListAsync(ct);
 
         return userEntities.Select(MapToDomain).ToList().AsReadOnly();
+    }
+
+    /// <summary>
+    /// Obtiene una lista paginada de usuarios con filtros opcionales.
+    /// </summary>
+    public async Task<PagedResult<User>> GetPagedAsync(
+        int page,
+        int pageSize,
+        string? search = null,
+        bool? isActive = null,
+        string? roleCode = null,
+        CancellationToken ct = default)
+    {
+        // Query base con includes necesarios
+        var query = _context.Users
+            .Include(u => u.UserRoles)
+                .ThenInclude(ur => ur.Role)
+                    .ThenInclude(r => r.RolePermissions)
+                        .ThenInclude(rp => rp.Permission)
+            .AsQueryable();
+
+        // Filtro de búsqueda por nombre o email
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var searchTerm = search.Trim().ToLowerInvariant();
+            query = query.Where(u =>
+                u.Name.ToLower().Contains(searchTerm) ||
+                u.Email.Contains(searchTerm));
+        }
+
+        // Filtro por estado activo/inactivo
+        if (isActive.HasValue)
+        {
+            query = query.Where(u => u.IsActive == isActive.Value);
+        }
+
+        // Filtro por código de rol
+        if (!string.IsNullOrWhiteSpace(roleCode))
+        {
+            var normalizedRoleCode = roleCode.Trim().ToUpperInvariant();
+            query = query.Where(u => u.UserRoles.Any(ur => ur.Role!.Code == normalizedRoleCode));
+        }
+
+        // Contar total de elementos (antes de paginar)
+        var totalItems = await query.CountAsync(ct);
+
+        // Aplicar ordenamiento
+        query = query.OrderBy(u => u.Name);
+
+        // Aplicar paginación
+        var skip = (page - 1) * pageSize;
+        var userEntities = await query
+            .Skip(skip)
+            .Take(pageSize)
+            .ToListAsync(ct);
+
+        // Mapear a dominio
+        var domainUsers = userEntities.Select(MapToDomain).ToList().AsReadOnly();
+
+        return new PagedResult<User>(
+            items: domainUsers,
+            page: page,
+            pageSize: pageSize,
+            totalItems: totalItems);
     }
 
     /// <summary>

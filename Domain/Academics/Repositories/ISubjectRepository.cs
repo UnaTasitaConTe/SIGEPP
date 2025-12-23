@@ -1,4 +1,5 @@
 using Domain.Academics.Entities;
+using Domain.Common;
 
 namespace Domain.Academics.Repositories;
 
@@ -66,6 +67,22 @@ public interface ISubjectRepository
     Task<IReadOnlyCollection<Subject>> GetByTeacherAndPeriodAsync(
         Guid teacherId,
         Guid academicPeriodId,
+        CancellationToken ct = default);
+
+    /// <summary>
+    /// Obtiene una lista paginada de asignaturas con filtros opcionales.
+    /// </summary>
+    /// <param name="page">Número de página (base 1).</param>
+    /// <param name="pageSize">Cantidad de elementos por página.</param>
+    /// <param name="search">Texto de búsqueda opcional para filtrar por código o nombre.</param>
+    /// <param name="isActive">Filtro opcional por estado activo (true), inactivo (false), o todos (null).</param>
+    /// <param name="ct">Token de cancelación.</param>
+    /// <returns>Resultado paginado con asignaturas y metadatos de paginación.</returns>
+    Task<PagedResult<Subject>> GetPagedAsync(
+        int page,
+        int pageSize,
+        string? search = null,
+        bool? isActive = null,
         CancellationToken ct = default);
 
     /// <summary>

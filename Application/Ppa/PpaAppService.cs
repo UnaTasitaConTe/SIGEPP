@@ -2,6 +2,7 @@ using Application.Ppa.Commands;
 using Application.Ppa.DTOs;
 using Application.Security;
 using Domain.Academics.Repositories;
+using Domain.Common;
 using Domain.Dictionaries;
 using Domain.Ppa;
 using Domain.Ppa.Entities;
@@ -201,6 +202,62 @@ public sealed class PpaAppService
         }
 
         return result.AsReadOnly();
+    }
+
+    /// <summary>
+    /// Obtiene una lista paginada de PPAs con filtros avanzados.
+    /// </summary>
+    /// <param name="query">Consulta con parámetros de paginación y filtros.</param>
+    /// <param name="ct">Token de cancelación.</param>
+    /// <returns>Resultado paginado con PPAs resumidos.</returns>
+    public async Task<PagedResult<PpaSummaryDto>> GetPpasPagedAsync(
+        PpaPagedQuery query,
+        CancellationToken ct = default)
+    {
+        if (query == null)
+            throw new ArgumentNullException(nameof(query));
+
+        // Llamar al repositorio con todos los filtros
+        var pagedResult = await _ppaRepository.GetPagedAsync(
+            page: query.Page,
+            pageSize: query.PageSize,
+            search: query.Search,
+            academicPeriodId: query.AcademicPeriodId,
+            status: query.Status,
+            responsibleTeacherId: query.ResponsibleTeacherId,
+            teacherId: query.TeacherId,
+            ct: ct);
+
+        // Mapear cada PPA a PpaSummaryDto
+        var dtos = new List<PpaSummaryDto>();
+        foreach (var ppa in pagedResult.Items)
+        {
+            var period = await _periodRepository.GetByIdAsync(ppa.AcademicPeriodId, ct);
+            var teacher = await _userRepository.GetByIdAsync(ppa.ResponsibleTeacherId, ct);
+
+            dtos.Add(new PpaSummaryDto
+            {
+                Id = ppa.Id,
+                Title = ppa.Title,
+                Status = ppa.Status,
+                AcademicPeriodId = ppa.AcademicPeriodId,
+                AcademicPeriodCode = period?.Code,
+                ResponsibleTeacherId = ppa.ResponsibleTeacherId,
+                ResponsibleTeacherName = teacher?.Name,
+                AssignmentsCount = ppa.TeacherAssignmentIds.Count,
+                StudentsCount = ppa.Students.Count,
+                IsContinuation = ppa.ContinuationOfPpaId != null,
+                HasContinuation = ppa.ContinuedByPpaId != null,
+                CreatedAt = ppa.CreatedAt,
+                UpdatedAt = ppa.UpdatedAt
+            });
+        }
+
+        return new PagedResult<PpaSummaryDto>(
+            items: dtos.AsReadOnly(),
+            page: pagedResult.Page,
+            pageSize: pagedResult.PageSize,
+            totalItems: pagedResult.TotalItems);
     }
 
     /// <summary>

@@ -1,6 +1,7 @@
 using System.Reflection;
 using Domain.Academics.Entities;
 using Domain.Academics.Repositories;
+using Domain.Common;
 using Infrastructure.Persistence.Entities.Academics;
 using Microsoft.EntityFrameworkCore;
 
@@ -89,6 +90,56 @@ public class AcademicPeriodRepository : IAcademicPeriodRepository
     {
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         return await GetCurrentAsync(today, ct);
+    }
+
+    public async Task<PagedResult<AcademicPeriod>> GetPagedAsync(
+        int page,
+        int pageSize,
+        string? search = null,
+        bool? isActive = null,
+        CancellationToken ct = default)
+    {
+        // Query base
+        var query = _context.AcademicPeriods.AsQueryable();
+
+        // Filtro de búsqueda por código o nombre
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var searchTerm = search.Trim().ToUpperInvariant();
+            query = query.Where(ap =>
+                ap.Code.Contains(searchTerm) ||
+                ap.Name.ToUpper().Contains(searchTerm));
+        }
+
+        // Filtro por estado activo/inactivo
+        if (isActive.HasValue)
+        {
+            query = query.Where(ap => ap.IsActive == isActive.Value);
+        }
+
+        // Contar total de elementos (antes de paginar)
+        var totalItems = await query.CountAsync(ct);
+
+        // Aplicar ordenamiento (igual que GetAllAsync)
+        query = query
+            .OrderByDescending(ap => ap.StartDate)
+            .ThenBy(ap => ap.Code);
+
+        // Aplicar paginación
+        var skip = (page - 1) * pageSize;
+        var entities = await query
+            .Skip(skip)
+            .Take(pageSize)
+            .ToListAsync(ct);
+
+        // Mapear a dominio
+        var domainItems = entities.Select(MapToDomain).ToList().AsReadOnly();
+
+        return new PagedResult<AcademicPeriod>(
+            items: domainItems,
+            page: page,
+            pageSize: pageSize,
+            totalItems: totalItems);
     }
 
     public async Task AddAsync(AcademicPeriod period, CancellationToken ct = default)

@@ -1,4 +1,5 @@
 using Domain.Academics.Entities;
+using Domain.Common;
 
 namespace Domain.Academics.Repositories;
 
@@ -111,6 +112,28 @@ public interface ITeacherAssignmentRepository
         Guid subjectId,
         Guid academicPeriodId,
         Guid excludeAssignmentId,
+        CancellationToken ct = default);
+
+    /// <summary>
+    /// Obtiene una lista paginada de asignaciones docentes con filtros opcionales.
+    /// </summary>
+    /// <param name="page">Número de página (base 1).</param>
+    /// <param name="pageSize">Cantidad de elementos por página.</param>
+    /// <param name="search">Texto de búsqueda opcional para filtrar por nombre de docente o asignatura.</param>
+    /// <param name="isActive">Filtro opcional por estado activo (true), inactivo (false), o todos (null).</param>
+    /// <param name="academicPeriodId">Filtro opcional por período académico.</param>
+    /// <param name="teacherId">Filtro opcional por docente.</param>
+    /// <param name="subjectId">Filtro opcional por asignatura.</param>
+    /// <param name="ct">Token de cancelación.</param>
+    /// <returns>Resultado paginado con asignaciones docentes y metadatos de paginación.</returns>
+    Task<PagedResult<TeacherAssignment>> GetPagedAsync(
+        int page,
+        int pageSize,
+        string? search = null,
+        bool? isActive = null,
+        Guid? academicPeriodId = null,
+        Guid? teacherId = null,
+        Guid? subjectId = null,
         CancellationToken ct = default);
 
     /// <summary>

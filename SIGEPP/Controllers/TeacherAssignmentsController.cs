@@ -1,6 +1,7 @@
 using Application.Academics;
 using Application.Academics.Commands;
 using Application.Academics.DTOs;
+using Domain.Common;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -23,6 +24,66 @@ public class TeacherAssignmentsController : ControllerBase
     {
         _teacherAssignmentsAppService = teacherAssignmentsAppService ?? throw new ArgumentNullException(nameof(teacherAssignmentsAppService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    }
+
+    /// <summary>
+    /// Obtiene una lista paginada de asignaciones docentes con filtros opcionales.
+    /// </summary>
+    /// <param name="page">Número de página (base 1). Default: 1.</param>
+    /// <param name="pageSize">Cantidad de elementos por página. Default: 10.</param>
+    /// <param name="search">Texto de búsqueda opcional para filtrar por nombre de docente o asignatura.</param>
+    /// <param name="isActive">Filtro opcional por estado activo (true/false).</param>
+    /// <param name="academicPeriodId">Filtro opcional por período académico.</param>
+    /// <param name="teacherId">Filtro opcional por docente.</param>
+    /// <param name="subjectId">Filtro opcional por asignatura.</param>
+    /// <param name="ct">Token de cancelación.</param>
+    /// <returns>Resultado paginado con asignaciones docentes.</returns>
+    /// <response code="200">Lista paginada obtenida exitosamente.</response>
+    /// <response code="401">No autenticado.</response>
+    [HttpGet("paged")]
+    [Authorize(Policy = "TeacherSubjects.View")]
+    [ProducesResponseType(typeof(PagedResult<TeacherAssignmentDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> GetPaged(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10,
+        [FromQuery] string? search = null,
+        [FromQuery] bool? isActive = null,
+        [FromQuery] Guid? academicPeriodId = null,
+        [FromQuery] Guid? teacherId = null,
+        [FromQuery] Guid? subjectId = null,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            var query = new TeacherAssignmentPagedQuery
+            {
+                Page = page,
+                PageSize = pageSize,
+                Search = search,
+                IsActive = isActive,
+                AcademicPeriodId = academicPeriodId,
+                TeacherId = teacherId,
+                SubjectId = subjectId
+            };
+
+            var result = await _teacherAssignmentsAppService.GetPagedAsync(query, ct);
+
+            _logger.LogInformation(
+                "Se obtuvo página {Page} de asignaciones docentes. Total: {TotalItems}, Retornados: {Count}",
+                page,
+                result.TotalItems,
+                result.Items.Count);
+
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener lista paginada de asignaciones docentes");
+            return StatusCode(
+                StatusCodes.Status500InternalServerError,
+                new { message = "Error al obtener lista paginada de asignaciones docentes." });
+        }
     }
 
     /// <summary>

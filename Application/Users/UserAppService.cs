@@ -1,6 +1,7 @@
 using Application.Security;
 using Application.Users.Commands;
 using Application.Users.DTOs;
+using Domain.Common;
 using Domain.Security.Repositories;
 using Domain.Users;
 
@@ -301,6 +302,35 @@ public class UserAppService
     {
         var users = await _userRepository.GetAllAsync(ct);
         return users.Select(MapToDto).ToList().AsReadOnly();
+    }
+
+    /// <summary>
+    /// Obtiene una lista paginada de usuarios con filtros opcionales.
+    /// </summary>
+    /// <param name="query">Filtros de paginación y búsqueda para usuarios.</param>
+    /// <param name="ct">Token de cancelación.</param>
+    /// <returns>Resultado paginado con usuarios.</returns>
+    public async Task<PagedResult<UserDto>> GetUsersPagedAsync(UserPagedQuery query, CancellationToken ct = default)
+    {
+        if (query == null)
+            throw new ArgumentNullException(nameof(query));
+
+        var pagedResult = await _userRepository.GetPagedAsync(
+            page: query.Page,
+            pageSize: query.PageSize,
+            search: query.Search,
+            isActive: query.IsActive,
+            roleCode: query.RoleCode,
+            ct: ct);
+
+        // Mapear las entidades de dominio a DTOs
+        var dtos = pagedResult.Items.Select(MapToDto).ToList().AsReadOnly();
+
+        return new PagedResult<UserDto>(
+            items: dtos,
+            page: pagedResult.Page,
+            pageSize: pagedResult.PageSize,
+            totalItems: pagedResult.TotalItems);
     }
 
     // ====================================

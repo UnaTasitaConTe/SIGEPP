@@ -2,6 +2,7 @@ using Application.Academics.Commands;
 using Application.Academics.DTOs;
 using Domain.Academics.Entities;
 using Domain.Academics.Repositories;
+using Domain.Common;
 using Domain.Users;
 
 namespace Application.Academics;
@@ -73,6 +74,39 @@ public sealed class TeacherAssignmentsAppService
     {
         var assignments = await _assignmentRepository.GetByPeriodAsync(academicPeriodId, ct);
         return assignments.Select(ToDto).ToList().AsReadOnly();
+    }
+
+    /// <summary>
+    /// Obtiene una lista paginada de asignaciones docentes con filtros opcionales.
+    /// </summary>
+    /// <param name="query">Filtros de paginación y búsqueda específicos para asignaciones.</param>
+    /// <param name="ct">Token de cancelación.</param>
+    /// <returns>Resultado paginado con asignaciones docentes.</returns>
+    public async Task<PagedResult<TeacherAssignmentDto>> GetPagedAsync(
+        TeacherAssignmentPagedQuery query,
+        CancellationToken ct = default)
+    {
+        if (query == null)
+            throw new ArgumentNullException(nameof(query));
+
+        var pagedResult = await _assignmentRepository.GetPagedAsync(
+            page: query.Page,
+            pageSize: query.PageSize,
+            search: query.Search,
+            isActive: query.IsActive,
+            academicPeriodId: query.AcademicPeriodId,
+            teacherId: query.TeacherId,
+            subjectId: query.SubjectId,
+            ct: ct);
+
+        // Mapear las entidades de dominio a DTOs
+        var dtos = pagedResult.Items.Select(ToDto).ToList().AsReadOnly();
+
+        return new PagedResult<TeacherAssignmentDto>(
+            items: dtos,
+            page: pagedResult.Page,
+            pageSize: pagedResult.PageSize,
+            totalItems: pagedResult.TotalItems);
     }
 
     /// <summary>

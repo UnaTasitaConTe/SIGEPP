@@ -1,4 +1,5 @@
 using System.Reflection;
+using Domain.Common;
 using Domain.Ppa;
 using Domain.Ppa.Repositories;
 using Domain.Ppa.ValueObjects;
@@ -506,6 +507,89 @@ public sealed class PpaRepository : IPpaRepository
 
         // SaveChanges independiente solo para estudiantes
         await _context.SaveChangesAsync(ct);
+    }
+
+    public async Task<PagedResult<Domain.Ppa.Entities.Ppa>> GetPagedAsync(
+        int page,
+        int pageSize,
+        string? search = null,
+        Guid? academicPeriodId = null,
+        PpaStatus? status = null,
+        Guid? responsibleTeacherId = null,
+        Guid? teacherId = null,
+        CancellationToken ct = default)
+    {
+        // Query base con includes necesarios
+        var query = _context.Ppas
+            .Include(p => p.PpaTeacherAssignments)
+                .ThenInclude(pta => pta.TeacherAssignment)
+                    .ThenInclude(ta => ta!.Teacher)
+            .Include(p => p.Students)
+            .AsQueryable();
+
+        // Filtro de búsqueda por título, objetivos o descripción
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var searchTerm = search.Trim().ToUpperInvariant();
+            query = query.Where(p =>
+                p.Title.ToUpper().Contains(searchTerm) ||
+                (p.GeneralObjective != null && p.GeneralObjective.ToUpper().Contains(searchTerm)) ||
+                (p.SpecificObjectives != null && p.SpecificObjectives.ToUpper().Contains(searchTerm)) ||
+                (p.Description != null && p.Description.ToUpper().Contains(searchTerm)));
+        }
+
+        // Filtro por período académico
+        if (academicPeriodId.HasValue)
+        {
+            query = query.Where(p => p.AcademicPeriodId == academicPeriodId.Value);
+        }
+
+        // Filtro por estado
+        if (status.HasValue)
+        {
+            var statusInt = (int)status.Value;
+            query = query.Where(p => p.Status == statusInt);
+        }
+
+        // Filtro por docente responsable (PrimaryTeacher)
+        if (responsibleTeacherId.HasValue)
+        {
+            query = query.Where(p => p.PrimaryTeacherId == responsibleTeacherId.Value);
+        }
+
+        // Filtro por cualquier docente vinculado (responsable o asignado)
+        if (teacherId.HasValue)
+        {
+            query = query.Where(p =>
+                p.PrimaryTeacherId == teacherId.Value ||
+                p.PpaTeacherAssignments.Any(pta =>
+                    pta.TeacherAssignment != null &&
+                    pta.TeacherAssignment.TeacherId == teacherId.Value));
+        }
+
+        // Contar total de elementos (antes de paginar)
+        var totalItems = await query.CountAsync(ct);
+
+        // Aplicar ordenamiento (por fecha de creación descendente, luego por título)
+        query = query
+            .OrderByDescending(p => p.CreatedAt)
+            .ThenBy(p => p.Title);
+
+        // Aplicar paginación
+        var skip = (page - 1) * pageSize;
+        var entities = await query
+            .Skip(skip)
+            .Take(pageSize)
+            .ToListAsync(ct);
+
+        // Mapear a dominio
+        var domainPpas = entities.Select(MapToDomain).ToList().AsReadOnly();
+
+        return new PagedResult<Domain.Ppa.Entities.Ppa>(
+            items: domainPpas,
+            page: page,
+            pageSize: pageSize,
+            totalItems: totalItems);
     }
 
     /// <summary>

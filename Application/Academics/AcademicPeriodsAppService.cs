@@ -1,7 +1,9 @@
 using Application.Academics.Commands;
 using Application.Academics.DTOs;
+using Application.Common;
 using Domain.Academics.Entities;
 using Domain.Academics.Repositories;
+using Domain.Common;
 
 namespace Application.Academics;
 
@@ -38,6 +40,34 @@ public sealed class AcademicPeriodsAppService
     {
         var periods = await _periodRepository.GetActiveAsync(ct);
         return periods.Select(ToDto).ToList().AsReadOnly();
+    }
+
+    /// <summary>
+    /// Obtiene una lista paginada de períodos académicos con filtros opcionales.
+    /// </summary>
+    /// <param name="query">Filtros de paginación y búsqueda.</param>
+    /// <param name="ct">Token de cancelación.</param>
+    /// <returns>Resultado paginado con períodos académicos.</returns>
+    public async Task<PagedResult<AcademicPeriodDto>> GetPagedAsync(PagedQuery query, CancellationToken ct = default)
+    {
+        if (query == null)
+            throw new ArgumentNullException(nameof(query));
+
+        var pagedResult = await _periodRepository.GetPagedAsync(
+            page: query.Page,
+            pageSize: query.PageSize,
+            search: query.Search,
+            isActive: query.IsActive,
+            ct: ct);
+
+        // Mapear las entidades de dominio a DTOs
+        var dtos = pagedResult.Items.Select(ToDto).ToList().AsReadOnly();
+
+        return new PagedResult<AcademicPeriodDto>(
+            items: dtos,
+            page: pagedResult.Page,
+            pageSize: pagedResult.PageSize,
+            totalItems: pagedResult.TotalItems);
     }
 
     /// <summary>

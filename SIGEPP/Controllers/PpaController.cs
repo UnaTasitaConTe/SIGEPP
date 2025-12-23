@@ -2,6 +2,8 @@ using Application.Ppa;
 using Application.Ppa.Commands;
 using Application.Ppa.DTOs;
 using Application.Security;
+using Domain.Common;
+using Domain.Ppa;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -538,6 +540,93 @@ public class PpaController : ControllerBase
             return StatusCode(
                 StatusCodes.Status500InternalServerError,
                 new { message = "Error al obtener los PPAs del docente." });
+        }
+    }
+
+    /// <summary>
+    /// Obtiene una lista paginada de PPAs con filtros avanzados.
+    /// </summary>
+    /// <param name="page">Número de página (base 1).</param>
+    /// <param name="pageSize">Cantidad de elementos por página.</param>
+    /// <param name="search">Texto de búsqueda en título, objetivos o descripción.</param>
+    /// <param name="academicPeriodId">Filtro por período académico.</param>
+    /// <param name="status">Filtro por estado del PPA.</param>
+    /// <param name="responsibleTeacherId">Filtro por docente responsable.</param>
+    /// <param name="teacherId">Filtro por cualquier docente vinculado (responsable o asignado).</param>
+    /// <param name="ct">Token de cancelación.</param>
+    /// <returns>Resultado paginado con PPAs.</returns>
+    /// <response code="200">Lista paginada obtenida exitosamente.</response>
+    /// <response code="401">No autenticado.</response>
+    /// <response code="403">No tiene permisos.</response>
+    /// <remarks>
+    /// Autorización basada en rol:
+    /// - ADMIN: Puede ver todos los PPAs con los filtros especificados.
+    /// - DOCENTE: Solo puede ver sus propios PPAs (el filtro teacherId se aplica automáticamente con su ID).
+    /// </remarks>
+    [HttpGet("paged")]
+    [Authorize(Policy = "Ppa.View")]
+    [ProducesResponseType(typeof(PagedResult<PpaSummaryDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> GetPaged(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10,
+        [FromQuery] string? search = null,
+        [FromQuery] Guid? academicPeriodId = null,
+        [FromQuery] PpaStatus? status = null,
+        [FromQuery] Guid? responsibleTeacherId = null,
+        [FromQuery] Guid? teacherId = null,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            // Obtener el usuario actual para determinar permisos
+            var currentUser = _currentUserService.GetCurrentUser();
+            if (currentUser == null)
+            {
+                _logger.LogWarning("No se pudo obtener el usuario autenticado al intentar obtener PPAs paginados");
+                return Unauthorized(new { message = "No se pudo autenticar el usuario." });
+            }
+
+            // Autorización basada en rol
+            var isAdmin = currentUser.Roles.Contains("ADMIN");
+
+            // Si el usuario NO es ADMIN, solo puede ver sus propios PPAs
+            if (!isAdmin)
+            {
+                teacherId = currentUser.UserId;
+            }
+
+            // Construir la consulta paginada
+            var query = new PpaPagedQuery
+            {
+                Page = page,
+                PageSize = pageSize,
+                Search = search,
+                AcademicPeriodId = academicPeriodId,
+                Status = status,
+                ResponsibleTeacherId = responsibleTeacherId,
+                TeacherId = teacherId
+            };
+
+            var result = await _ppaAppService.GetPpasPagedAsync(query, ct);
+
+            _logger.LogInformation(
+                "Se obtuvieron {Count} PPAs (página {Page} de {TotalPages}). Usuario: {UserId}, Rol: {Role}",
+                result.Items.Count,
+                result.Page,
+                result.TotalPages,
+                currentUser.UserId,
+                isAdmin ? "ADMIN" : "DOCENTE");
+
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error inesperado al obtener PPAs paginados");
+            return StatusCode(
+                StatusCodes.Status500InternalServerError,
+                new { message = "Error al obtener los PPAs." });
         }
     }
 

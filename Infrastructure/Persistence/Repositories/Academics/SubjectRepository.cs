@@ -1,6 +1,7 @@
 using System.Reflection;
 using Domain.Academics.Entities;
 using Domain.Academics.Repositories;
+using Domain.Common;
 using Infrastructure.Persistence.Entities.Academics;
 using Microsoft.EntityFrameworkCore;
 
@@ -85,6 +86,54 @@ public class SubjectRepository : ISubjectRepository
             .ToListAsync(ct);
 
         return entities.Select(MapToDomain).ToList().AsReadOnly();
+    }
+
+    public async Task<PagedResult<Subject>> GetPagedAsync(
+        int page,
+        int pageSize,
+        string? search = null,
+        bool? isActive = null,
+        CancellationToken ct = default)
+    {
+        // Query base
+        var query = _context.Subjects.AsQueryable();
+
+        // Filtro de búsqueda por código o nombre
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var searchTerm = search.Trim().ToUpperInvariant();
+            query = query.Where(s =>
+                s.Code.Contains(searchTerm) ||
+                s.Name.ToUpper().Contains(searchTerm));
+        }
+
+        // Filtro por estado activo/inactivo
+        if (isActive.HasValue)
+        {
+            query = query.Where(s => s.IsActive == isActive.Value);
+        }
+
+        // Contar total de elementos (antes de paginar)
+        var totalItems = await query.CountAsync(ct);
+
+        // Aplicar ordenamiento (igual que GetAllAsync)
+        query = query.OrderBy(s => s.Code);
+
+        // Aplicar paginación
+        var skip = (page - 1) * pageSize;
+        var entities = await query
+            .Skip(skip)
+            .Take(pageSize)
+            .ToListAsync(ct);
+
+        // Mapear a dominio
+        var domainItems = entities.Select(MapToDomain).ToList().AsReadOnly();
+
+        return new PagedResult<Subject>(
+            items: domainItems,
+            page: page,
+            pageSize: pageSize,
+            totalItems: totalItems);
     }
 
     public async Task AddAsync(Subject subject, CancellationToken ct = default)

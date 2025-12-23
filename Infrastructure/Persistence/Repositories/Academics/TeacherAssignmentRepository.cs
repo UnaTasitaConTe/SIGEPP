@@ -1,6 +1,7 @@
 using System.Reflection;
 using Domain.Academics.Entities;
 using Domain.Academics.Repositories;
+using Domain.Common;
 using Infrastructure.Persistence.Entities.Academics;
 using Microsoft.EntityFrameworkCore;
 
@@ -138,6 +139,83 @@ public class TeacherAssignmentRepository : ITeacherAssignmentRepository
                 && ta.SubjectId == subjectId
                 && ta.AcademicPeriodId == academicPeriodId,
                 ct);
+    }
+
+    public async Task<PagedResult<TeacherAssignment>> GetPagedAsync(
+        int page,
+        int pageSize,
+        string? search = null,
+        bool? isActive = null,
+        Guid? academicPeriodId = null,
+        Guid? teacherId = null,
+        Guid? subjectId = null,
+        CancellationToken ct = default)
+    {
+        // Query base con navegaciones
+        var query = _context.TeacherAssignments
+            .Include(x => x.Teacher)
+            .Include(x => x.AcademicPeriod)
+            .Include(x => x.Subject)
+            .AsQueryable();
+
+        // Filtro por período académico
+        if (academicPeriodId.HasValue)
+        {
+            query = query.Where(ta => ta.AcademicPeriodId == academicPeriodId.Value);
+        }
+
+        // Filtro por docente
+        if (teacherId.HasValue)
+        {
+            query = query.Where(ta => ta.TeacherId == teacherId.Value);
+        }
+
+        // Filtro por asignatura
+        if (subjectId.HasValue)
+        {
+            query = query.Where(ta => ta.SubjectId == subjectId.Value);
+        }
+
+        // Filtro por estado activo/inactivo
+        if (isActive.HasValue)
+        {
+            query = query.Where(ta => ta.IsActive == isActive.Value);
+        }
+
+        // Filtro de búsqueda por nombre de docente o nombre de asignatura
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var searchTerm = search.Trim().ToUpperInvariant();
+            query = query.Where(ta =>
+                ta.Teacher!.Name.ToUpper().Contains(searchTerm) ||
+                ta.Subject!.Name.ToUpper().Contains(searchTerm) ||
+                ta.Subject!.Code.Contains(searchTerm));
+        }
+
+        // Contar total de elementos (antes de paginar)
+        var totalItems = await query.CountAsync(ct);
+
+        // Aplicar ordenamiento
+        query = query
+            .OrderByDescending(ta => ta.CreatedAt)
+            .ThenBy(ta => ta.Teacher!.Name)
+            .ThenBy(ta => ta.Subject!.Code);
+
+        // Aplicar paginación
+        var skip = (page - 1) * pageSize;
+        var entities = await query
+            .Skip(skip)
+            .Take(pageSize)
+            .ToListAsync(ct);
+
+        // Mapear a dominio
+        var domainItems = entities.Select(MapToDomain).ToList().AsReadOnly();
+
+        return new PagedResult<TeacherAssignment>(
+            items: domainItems,
+            page: page,
+            pageSize: pageSize,
+            totalItems: totalItems);
     }
 
     public async Task<bool> ExistsAsync(

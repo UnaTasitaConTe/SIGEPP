@@ -1,3 +1,5 @@
+using Domain.Common;
+
 namespace Domain.Users;
 
 /// <summary>
@@ -67,4 +69,22 @@ public interface IUserRepository
     /// <param name="ct">Token de cancelación.</param>
     /// <returns>Lista de todos los usuarios.</returns>
     Task<IReadOnlyCollection<User>> GetAllAsync(CancellationToken ct = default);
+
+    /// <summary>
+    /// Obtiene una lista paginada de usuarios con filtros opcionales.
+    /// </summary>
+    /// <param name="page">Número de página (base 1).</param>
+    /// <param name="pageSize">Cantidad de elementos por página.</param>
+    /// <param name="search">Texto de búsqueda opcional para filtrar por nombre o email.</param>
+    /// <param name="isActive">Filtro opcional por estado activo (true), inactivo (false), o todos (null).</param>
+    /// <param name="roleCode">Filtro opcional por código de rol (ej: "ADMIN", "DOCENTE").</param>
+    /// <param name="ct">Token de cancelación.</param>
+    /// <returns>Resultado paginado con usuarios y metadatos de paginación.</returns>
+    Task<PagedResult<User>> GetPagedAsync(
+        int page,
+        int pageSize,
+        string? search = null,
+        bool? isActive = null,
+        string? roleCode = null,
+        CancellationToken ct = default);
 }

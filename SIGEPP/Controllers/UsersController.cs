@@ -1,6 +1,7 @@
 using Application.Users;
 using Application.Users.Commands;
 using Application.Users.DTOs;
+using Domain.Common;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.ComponentModel.DataAnnotations;
@@ -61,6 +62,59 @@ public class UsersController : ControllerBase
             return StatusCode(
                 StatusCodes.Status500InternalServerError,
                 new { message = "Error al obtener lista de usuarios." });
+        }
+    }
+
+    /// <summary>
+    /// Obtiene una lista paginada de usuarios con filtros opcionales.
+    /// </summary>
+    /// <param name="page">Número de página (base 1). Default: 1.</param>
+    /// <param name="pageSize">Cantidad de elementos por página. Default: 10.</param>
+    /// <param name="search">Texto de búsqueda opcional para filtrar por nombre o email.</param>
+    /// <param name="isActive">Filtro opcional por estado activo (true/false).</param>
+    /// <param name="roleCode">Filtro opcional por código de rol (ej: "ADMIN", "DOCENTE").</param>
+    /// <param name="ct">Token de cancelación.</param>
+    /// <returns>Resultado paginado con usuarios.</returns>
+    /// <response code="200">Lista paginada obtenida exitosamente.</response>
+    /// <response code="401">No autenticado.</response>
+    [HttpGet("paged")]
+    [ProducesResponseType(typeof(PagedResult<UserDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> GetPaged(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10,
+        [FromQuery] string? search = null,
+        [FromQuery] bool? isActive = null,
+        [FromQuery] string? roleCode = null,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            var query = new UserPagedQuery
+            {
+                Page = page,
+                PageSize = pageSize,
+                Search = search,
+                IsActive = isActive,
+                RoleCode = roleCode
+            };
+
+            var result = await _userAppService.GetUsersPagedAsync(query, ct);
+
+            _logger.LogInformation(
+                "Se obtuvo página {Page} de usuarios. Total: {TotalItems}, Retornados: {Count}",
+                page,
+                result.TotalItems,
+                result.Items.Count);
+
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener lista paginada de usuarios");
+            return StatusCode(
+                StatusCodes.Status500InternalServerError,
+                new { message = "Error al obtener lista paginada de usuarios." });
         }
     }
 

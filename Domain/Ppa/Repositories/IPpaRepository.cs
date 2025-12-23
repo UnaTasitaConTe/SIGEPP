@@ -1,3 +1,4 @@
+using Domain.Common;
 using Domain.Ppa.Entities;
 
 namespace Domain.Ppa.Repositories;
@@ -114,6 +115,28 @@ public interface IPpaRepository
         string title,
         Guid academicPeriodId,
         Guid? excludePpaId = null,
+        CancellationToken ct = default);
+
+    /// <summary>
+    /// Obtiene una lista paginada de PPAs con filtros opcionales.
+    /// </summary>
+    /// <param name="page">Número de página (base 1).</param>
+    /// <param name="pageSize">Cantidad de elementos por página.</param>
+    /// <param name="search">Texto de búsqueda opcional para filtrar por título, objetivo general o descripción.</param>
+    /// <param name="academicPeriodId">Filtro opcional por período académico.</param>
+    /// <param name="status">Filtro opcional por estado del PPA.</param>
+    /// <param name="responsibleTeacherId">Filtro opcional por docente responsable.</param>
+    /// <param name="teacherId">Filtro opcional por cualquier docente vinculado (responsable o asignado).</param>
+    /// <param name="ct">Token de cancelación.</param>
+    /// <returns>Resultado paginado con PPAs y metadatos de paginación.</returns>
+    Task<PagedResult<Entities.Ppa>> GetPagedAsync(
+        int page,
+        int pageSize,
+        string? search = null,
+        Guid? academicPeriodId = null,
+        PpaStatus? status = null,
+        Guid? responsibleTeacherId = null,
+        Guid? teacherId = null,
         CancellationToken ct = default);
 
     /// <summary>
