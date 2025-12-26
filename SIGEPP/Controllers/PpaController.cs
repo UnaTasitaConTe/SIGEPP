@@ -618,7 +618,7 @@ public class PpaController : ControllerBase
                 result.Page,
                 result.TotalPages,
                 currentUser.UserId,
-                isAdmin ? "ADMIN" : "DOCENTE");
+                isTeacher ? "Docente" : "ADMIN/CONSULTOR");
 
             return Ok(result);
         }
