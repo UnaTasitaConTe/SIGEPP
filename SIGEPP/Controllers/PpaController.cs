@@ -589,10 +589,11 @@ public class PpaController : ControllerBase
             }
 
             // Autorización basada en rol
-            var isAdmin = currentUser.Roles.Contains("ADMIN");
+            var isTeacher = currentUser.Roles.Contains("DOCENTE");
+             
 
             // Si el usuario NO es ADMIN, solo puede ver sus propios PPAs
-            if (!isAdmin)
+            if (isTeacher)
             {
                 teacherId = currentUser.UserId;
             }
