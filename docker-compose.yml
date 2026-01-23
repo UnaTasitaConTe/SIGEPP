@@ -1,0 +1,107 @@
+version: '3.8'
+
+services:
+  minio:
+    image: cgr.dev/chainguard/minio:latest
+    container_name: minio
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: 2d9bsyhg66k094g4
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"   # API S3
+      - "9001:9001"   # Consola web fija (ya no random)
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "echo > /dev/tcp/localhost/9000"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
+        reservations:
+          cpus: "0.50"
+          memory: 512M
+  sigepp-api:
+    build:
+      context: .
+      dockerfile: ./SIGEPP/Dockerfile
+    container_name: sigepp-api
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__DefaultConnection: Host=sigepp-postgres-powsmt;Database=sigepp;Username=sigepp;Password=sigepp;Include Error Detail=true;
+      Logging__LogLevel__Default: Information
+      Logging__LogLevel__Microsoft_AspNetCore: Warning
+      AllowedHosts: "*"
+      Jwt__SecretKey: rmuuXWHqyHczIPkrletUQBNZRelkzrQF
+      Jwt__Issuer: SIGEPP-API
+      Jwt__Audience: SIGGEPP-CLIENT
+      Jwt__ExpirationMinutes: 60
+      Minio__Endpoint: minio:9000
+      Minio__UseSsl: false
+      Minio__AccessKey: minioadmin
+      Minio__SecretKey: 2d9bsyhg66k094g4
+      Minio__BucketName: ppas
+      Cors__AllowedOrigins__0: http://localhost:3000
+      Cors__AllowCredentials: true
+    depends_on:
+      minio:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    networks:
+      - sigepp-network
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 768M
+        reservations:
+          cpus: "0.50"
+          memory: 512M
+  postgres:
+    image: postgres:16
+    container_name: sigepp-postgres-powsmt
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: sigepp
+      POSTGRES_USER: sigepp
+      POSTGRES_PASSWORD: sigepp
+    expose:
+      - 5432
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - sigepp-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sigepp -d sigepp"]
+      interval: 1m30s
+      timeout: 30s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
+        reservations:
+          cpus: "0.50"
+          memory: 512M
+
+volumes:
+  minio_data:
+  pgdata:
+networks:
+  sigepp-network:
+    driver: bridge
