@@ -13,6 +13,8 @@ services:
       - "9001:9001"   # Consola web fija (ya no random)
     volumes:
       - minio_data:/data
+    networks:
+      - sigepp-network
     healthcheck:
       test: ["CMD-SHELL", "echo > /dev/tcp/localhost/9000"]
       interval: 30s
