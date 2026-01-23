@@ -14,7 +14,6 @@ namespace SIGEPP.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles="ADMIN")] // Todos los endpoints requieren autenticación
 public class UsersController : ControllerBase
 {
     private readonly UserAppService _userAppService;
@@ -37,6 +36,7 @@ public class UsersController : ControllerBase
     /// <response code="200">Lista de usuarios obtenida exitosamente.</response>
     /// <response code="401">No autenticado.</response>
     [HttpGet]
+    [Authorize(Roles = "ADMIN")] // Todos los endpoints requieren autenticación
     [ProducesResponseType(typeof(IReadOnlyCollection<UserDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetAll(
@@ -77,6 +77,8 @@ public class UsersController : ControllerBase
     /// <returns>Resultado paginado con usuarios.</returns>
     /// <response code="200">Lista paginada obtenida exitosamente.</response>
     /// <response code="401">No autenticado.</response>
+    /// 
+    [Authorize(Roles = "ADMIN")] // Todos los endpoints requieren autenticación
     [HttpGet("paged")]
     [ProducesResponseType(typeof(PagedResult<UserDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -127,6 +129,8 @@ public class UsersController : ControllerBase
     /// <response code="200">Usuario encontrado.</response>
     /// <response code="404">Usuario no encontrado.</response>
     /// <response code="401">No autenticado.</response>
+    /// 
+    [Authorize(Roles = "ADMIN")] // Todos los endpoints requieren autenticación
     [HttpGet("{id:guid}")]
     [ProducesResponseType(typeof(UserDetailDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -165,6 +169,7 @@ public class UsersController : ControllerBase
     /// <response code="201">Usuario creado exitosamente.</response>
     /// <response code="400">Datos inválidos o email ya en uso.</response>
     /// <response code="401">No autenticado.</response>
+    [Authorize(Roles = "ADMIN")] // Todos los endpoints requieren autenticación
     [HttpPost]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -220,6 +225,7 @@ public class UsersController : ControllerBase
     /// <response code="404">Usuario no encontrado.</response>
     /// <response code="401">No autenticado.</response>
     [HttpPut("{id:guid}")]
+    [Authorize(Roles = "ADMIN")] // Todos los endpoints requieren autenticación
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -272,6 +278,7 @@ public class UsersController : ControllerBase
     /// <response code="404">Usuario no encontrado.</response>
     /// <response code="401">No autenticado.</response>
     [HttpPost("{id:guid}/activate")]
+    [Authorize(Roles = "ADMIN")] // Todos los endpoints requieren autenticación
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -311,6 +318,7 @@ public class UsersController : ControllerBase
     /// <response code="404">Usuario no encontrado.</response>
     /// <response code="401">No autenticado.</response>
     [HttpPost("{id:guid}/deactivate")]
+    [Authorize(Roles = "ADMIN")] // Todos los endpoints requieren autenticación
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -352,6 +360,7 @@ public class UsersController : ControllerBase
     /// <response code="404">Usuario no encontrado.</response>
     /// <response code="401">No autenticado.</response>
     [HttpPost("{id:guid}/roles")]
+    [Authorize(Roles = "ADMIN")] // Todos los endpoints requieren autenticación
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -409,6 +418,7 @@ public class UsersController : ControllerBase
     /// <response code="400">Rol no existe.</response>
     /// <response code="404">Usuario no encontrado.</response>
     /// <response code="401">No autenticado.</response>
+    [Authorize(Roles = "ADMIN")] // Todos los endpoints requieren autenticación
     [HttpDelete("{id:guid}/roles/{roleCode}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -510,6 +520,7 @@ public class UsersController : ControllerBase
     /// <response code="404">Usuario no encontrado.</response>
     /// <response code="401">No autenticado.</response>
     [HttpGet("{id:guid}/permissions")]
+    [Authorize(Roles = "ADMIN")] // Todos los endpoints requieren autenticación
     [ProducesResponseType(typeof(IReadOnlyCollection<string>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
